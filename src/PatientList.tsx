@@ -5,6 +5,8 @@ import {
   useMutation,
   gql
 } from "@apollo/client";
+import { documentGenerator, DocumentGenerationOptions } from './utils/DocumentGenerator';
+import type { SOAPNote } from './PatientEHR';
 
 const GET_PATIENTS = gql`
   query GetPatients {
@@ -36,6 +38,8 @@ const BULK_ARCHIVE_CLIENTS = gql`
     }
   }
 `;
+
+// Extend the Patient interface to include soapDocument
 interface Patient {
   id: string;
   full_name: string;
@@ -53,6 +57,7 @@ interface Patient {
   dob: string;
   created_at: string;
   condition?: string;
+  soapDocument?: SOAPNote; // Added for pre-filled SOAP document
 }
 
 interface PatientListProps {
@@ -67,6 +72,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [conditionFilter, setConditionFilter] = useState<string>('');
+  const [loadingPatientId, setLoadingPatientId] = useState<string | null>(null); // New state for loading
 
   // Helper function to extract race/ethnicity from patient data
   const extractRaceEthnicity = (patient: any) => {
@@ -139,6 +145,40 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirmation(false);
+    }
+  };
+
+  // Function to generate and validate SOAP document
+  const generateAndValidateSOAPDocument = async (patient: Patient) => {
+    const condition = extractCondition(patient);
+    const options: DocumentGenerationOptions = {
+      disease: condition,
+      patientAge: parseInt(patient.age, 10),
+      patientGender: patient.gender,
+      patientRace: patient.primary_race || 'Not specified',
+      validateDocument: true
+    };
+
+    try {
+      const document = await documentGenerator.generateSOAPDocument(options);
+      return document;
+    } catch (error) {
+      console.error('Failed to generate valid SOAP document:', error);
+      return null;
+    }
+  };
+
+  // Update onPatientClick to generate SOAP document
+  const handlePatientClick = async (patient: Patient) => {
+    if (onPatientClick) {
+      setLoadingPatientId(patient.id); // Set loading state
+      const soapDocument = await generateAndValidateSOAPDocument(patient);
+      setLoadingPatientId(null); // Clear loading state
+      if (soapDocument) {
+        onPatientClick({ ...patient, soapDocument });
+      } else {
+        alert('Failed to generate a valid SOAP document for this patient.');
+      }
     }
   };
 
@@ -368,7 +408,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                 <tr 
                   key={patient.id} 
                   className="patient-row"
-                  onClick={() => onPatientClick && onPatientClick(patient)}
+                  onClick={() => handlePatientClick(patient)}
                   style={{
                     cursor: onPatientClick ? 'pointer' : 'default',
                     transition: 'background-color 0.2s ease'
@@ -408,20 +448,49 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                     >
                       {patient.full_name || 'N/A'}
                     </strong>
+                    {onPatientClick && loadingPatientId !== patient.id && (
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#666',
+                        marginLeft: '8px',
+                        fontWeight: 'normal'
+                      }}>
+                        (Click to view Clinical Record)
+                      </span>
+                    )}
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
                   <td>
                     <span style={{ 
-                      backgroundColor: condition !== 'Not Available' ? '#f0f0f0' : '#fafafa',
-                      padding: '4px 8px',
                       fontSize: '13px',
-                      fontWeight: condition !== 'Not Available' ? 'bold' : 'normal',
-                      color: condition !== 'Not Available' ? '#000' : '#666',
-                      border: condition !== 'Not Available' ? '1px solid #000' : '1px solid #ccc'
+                      color: condition !== 'Not Available' ? '#000' : '#666'
                     }}>
                       {condition}
                     </span>
+                    {loadingPatientId === patient.id && (
+                      <div className="loading-popup" style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 1000
+                      }}>
+                        <div style={{
+                          backgroundColor: 'white',
+                          padding: '20px',
+                          borderRadius: '5px',
+                          boxShadow: '0 0 10px rgba(0, 0, 0, 0.3)'
+                        }}>
+                          <div className="loading-spinner">Loading...</div>
+                        </div>
+                      </div>
+                    )}
                   </td>
                   <td>{raceEthnicityData.race_ethnicity}</td>
                   <td>{raceEthnicityData.secondary_race_ethnicity}</td>

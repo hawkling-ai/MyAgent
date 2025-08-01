@@ -185,8 +185,6 @@ nav {
       margin-top: 10px;
       padding: 15px;
       background: $gray-50;
-      border: $border-width-thin solid $primary-color;
-      @include sharp-box;
       color: $text-primary;
       font-size: 0.95em;
 
