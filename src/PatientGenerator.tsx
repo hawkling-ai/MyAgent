@@ -276,8 +276,9 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
     const birthDay = Math.floor(Math.random() * 28) + 1;
     const dob = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
     
-    // Generate realistic email and phone
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`;
+    // Generate realistic email and phone with UUID to prevent duplicates
+    const uuid = crypto.randomUUID().slice(0, 8); // Use first 8 characters of UUID
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${uuid}@email.com`;
     const phone = `(${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`;
     
     // Generate created date (sometime in the past year)
