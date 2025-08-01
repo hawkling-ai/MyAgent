@@ -1341,7 +1341,8 @@ select,
           }
         }
 
-        .raw-output {
+        .raw-output,
+        .raw-input {
           summary {
             @include technical-label;
             cursor: pointer;
@@ -1365,6 +1366,10 @@ select,
             white-space: pre-wrap;
             word-wrap: break-word;
           }
+        }
+
+        .raw-input {
+          margin-top: 10px;
         }
 
         .reasoning-section {

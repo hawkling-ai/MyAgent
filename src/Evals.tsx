@@ -3,6 +3,7 @@ import { gql, useQuery } from "@apollo/client";
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { documentGenerator } from "./utils/DocumentGenerator";
 import "./App.scss";
 
 interface EvalResult {
@@ -10,6 +11,7 @@ interface EvalResult {
   patientName: string;
   patientInitials: string;
   originalCondition: string;
+  rawInput: string;
   rawOutput: string;
   parsedDifferentials: Differential[];
   evalScore: boolean;
@@ -56,11 +58,13 @@ interface Patient {
   race: string;
   diagnosis?: string;
   metadata?: any;
+  subjective?: string;
+  objective?: string;
 }
 
 interface ModelConfig {
-  provider: "openai" | "anthropic" | "baseten";
-  prompt: string;
+  provider: "openai" | "anthropic" | "baseten" | "sddx";
+  prompt?: string;
 }
 
 interface BasetenModel {
@@ -89,14 +93,14 @@ interface EvalsProps {
   providerId: string;
 }
 
-const DEFAULT_PROMPT = `You are a medical diagnostic assistant. Given the patient demographics below, provide a structured differential diagnosis list.
+const DEFAULT_PROMPT = `You are a medical diagnostic assistant. Given the patient demographics and clinical findings below, provide a structured differential diagnosis list.
 
 For each condition in your differential, assess whether it is:
-- Positive: High probability based on demographics and risk factors
+- Positive: High probability based on demographics, clinical findings, and risk factors
 - Negative: Low probability or can be ruled out
 - Needs follow-up: Requires additional testing or information
 
-Consider demographic risk factors, prevalence rates, and epidemiological data when making your assessment. Provide specific reasoning for each differential diagnosis.
+Consider demographic risk factors, subjective findings, objective measurements, prevalence rates, and epidemiological data when making your assessment. Provide specific reasoning for each differential diagnosis based on all available patient data.
 
 You MUST respond with a JSON object that exactly matches this schema:
 
@@ -167,7 +171,7 @@ const parseBasetenModels = (): BasetenModel[] => {
 
 const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   const [selectedProvider, setSelectedProvider] = useState<
-    "openai" | "anthropic" | "baseten"
+    "openai" | "anthropic" | "baseten" | "sddx"
   >("openai");
   const [accordionState, setAccordionState] = useState<{
     pass: boolean;
@@ -178,6 +182,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
       openai: { provider: "openai", prompt: DEFAULT_PROMPT },
       anthropic: { provider: "anthropic", prompt: DEFAULT_PROMPT },
       baseten: { provider: "baseten", prompt: DEFAULT_PROMPT },
+      sddx: { provider: "sddx", prompt: "" },
     }
   );
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -238,9 +243,25 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
     return { race, ethnicity };
   };
 
+  // Extract SOAP data from patient metadata
+  const extractSOAPData = (patient: any) => {
+    if (patient.metadata) {
+      const metadata =
+        typeof patient.metadata === "string"
+          ? JSON.parse(patient.metadata)
+          : patient.metadata;
+      return {
+        subjective: metadata.subjective || metadata.subjectiveFindings || "",
+        objective: metadata.objective || metadata.objectiveMeasurements || ""
+      };
+    }
+    return { subjective: "", objective: "" };
+  };
+
   const patients: Patient[] =
     data?.users?.map((user: any) => {
       const { race, ethnicity } = extractRaceEthnicity(user);
+      const soapData = extractSOAPData(user);
       return {
         id: user.id,
         name: user.full_name || "Unknown",
@@ -250,6 +271,8 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
         race,
         diagnosis: extractDiagnosis(user),
         metadata: user.metadata,
+        subjective: soapData.subjective,
+        objective: soapData.objective,
       };
     }) || [];
 
@@ -290,7 +313,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   };
 
   // Handle model provider selection (no auto-collapse)
-  const handleProviderSelection = (provider: 'openai' | 'anthropic' | 'baseten') => {
+  const handleProviderSelection = (provider: 'openai' | 'anthropic' | 'baseten' | 'sddx') => {
     setSelectedProvider(provider);
     // Don't auto-collapse - let user manually control with +/- button
   };
@@ -315,13 +338,28 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
       diagnosis: patient.diagnosis,
     };
 
-    const fullPrompt = `${config.prompt}
-
-Patient Data:
+    // Build prompt with demographics and clinical findings, but NOT diagnosis
+    let patientInfo = `Patient Data:
 - Age: ${patientData.age}
 - Gender: ${patientData.gender}
 - Ethnicity: ${patientData.ethnicity}
 - Race: ${patientData.race}`;
+
+    // Add subjective findings if available
+    if (patient.subjective) {
+      patientInfo += `\n\nSubjective Findings:\n${patient.subjective}`;
+    }
+
+    // Add objective measurements if available
+    if (patient.objective) {
+      patientInfo += `\n\nObjective Measurements:\n${patient.objective}`;
+    }
+
+    const fullPrompt = modelProvider !== "sddx" ? `${config.prompt}\n\n${patientInfo}` : "";
+
+    // Variables for S-DDX (defined here for scope)
+    let patientDataString = "";
+    let medicalSummary = "";
 
     try {
       let structuredOutput: DifferentialDiagnosis;
@@ -438,6 +476,71 @@ Patient Data:
             differentials: [],
           };
         }
+      } else if (modelProvider === "sddx") {
+        // S-DDX doesn't use prompts, instead it uses structured patient data
+        patientDataString = `${patientData.age}-year-old ${patientData.gender}, ${patientData.ethnicity} ethnicity, ${patientData.race} race`;
+        
+        // Build medical summary from subjective and objective findings (NOT diagnosis)
+        medicalSummary = "";
+        if (patient.subjective) {
+          medicalSummary += `Subjective: ${patient.subjective}`;
+        }
+        if (patient.objective) {
+          if (medicalSummary) medicalSummary += " ";
+          medicalSummary += `Objective: ${patient.objective}`;
+        }
+        if (!medicalSummary) {
+          medicalSummary = "No specific symptoms provided";
+        }
+        
+        const response = await fetch(
+          `https://self-ddx.com/api/v2/ddx?${new URLSearchParams({
+            patient_data: patientDataString,
+            medical_summary: medicalSummary
+          })}`,
+          {
+            method: "GET",
+            headers: {
+              "Accept": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            `S-DDX API error: ${
+              errorData.error || response.statusText
+            }`
+          );
+        }
+
+        const sddxResponse = await response.json();
+        rawOutput = JSON.stringify(sddxResponse, null, 2);
+
+        // Transform S-DDX response to match our format
+        structuredOutput = {
+          differentials: sddxResponse.map((item: any) => {
+            // Map probability to conclusion
+            let conclusion: "positive" | "negative" | "needs follow-up";
+            if (item.probability > 0.7) {
+              conclusion = "positive";
+            } else if (item.probability >= 0.4) {
+              conclusion = "needs follow-up";
+            } else {
+              conclusion = "negative";
+            }
+
+            // Combine reasoning paths into a single string
+            const reasoning = item.reasoning.supporting_paths.join(". ");
+
+            return {
+              condition: item.diagnosis,
+              conclusion,
+              reasoning: reasoning || "Based on demographic factors and clinical presentation"
+            };
+          })
+        };
       } else {
         throw new Error(`Unsupported model provider: ${modelProvider}`);
       }
@@ -459,6 +562,7 @@ Patient Data:
         patientName: patient.name,
         patientInitials: getPatientInitials(patient.name),
         originalCondition: patient.diagnosis!,
+        rawInput: modelProvider === "sddx" ? `Patient Data: ${patientDataString}\nMedical Summary: ${medicalSummary}` : fullPrompt,
         rawOutput,
         parsedDifferentials,
         evalScore,
@@ -471,6 +575,7 @@ Patient Data:
         patientName: patient.name,
         patientInitials: getPatientInitials(patient.name),
         originalCondition: patient.diagnosis!,
+        rawInput: modelProvider === "sddx" ? `Patient Data: ${patientDataString}\nMedical Summary: ${medicalSummary}` : fullPrompt,
         rawOutput: `Error: ${
           error instanceof Error
             ? error.message
@@ -485,7 +590,7 @@ Patient Data:
 
   const handleEvaluate = async () => {
     const config = modelConfigs[selectedProvider];
-    if (!config.prompt || selectedPatients.length === 0) {
+    if ((selectedProvider !== "sddx" && !config.prompt) || selectedPatients.length === 0) {
       alert("Please enter a prompt and select at least one patient");
       return;
     }
@@ -691,6 +796,40 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                 </div>
               )}
             </div>
+
+            {/* SelfHealth S-DDX Tab */}
+            <div
+              className={`model-tab ${
+                selectedProvider === "sddx" ? "active" : ""
+              }`}
+            >
+              <button
+                className="model-tab-header"
+                onClick={() => handleProviderSelection('sddx')}
+              >
+                <span className="provider-name">SelfHealth</span>
+                <span className="model-name">S-DDX API</span>
+              </button>
+
+              {selectedProvider === "sddx" && (
+                <div className="model-tab-content">
+                  <div className="form-group">
+                    <div className="sddx-info">
+                      <h4>About SelfHealth S-DDX</h4>
+                      <p>
+                        SelfHealth S-DDX automatically generates differential diagnoses 
+                        based on patient demographics. No prompt configuration needed.
+                      </p>
+                      <p>
+                        The API analyzes patient age, gender, ethnicity, and race to 
+                        provide evidence-based differential diagnoses with probability 
+                        scores and clinical reasoning.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
               </div>
             )}
           </div>
@@ -706,6 +845,7 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                   {selectedProvider === 'baseten' && (
                     availableBasetenModels.find(m => m.id === selectedBasetenModel)?.name || 'Baseten Model'
                   )}
+                  {selectedProvider === 'sddx' && 'SelfHealth S-DDX API'}
                 </span>
               </div>
             </div>
@@ -746,7 +886,7 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
             disabled={
               isEvaluating ||
               selectedPatients.length === 0 ||
-              !modelConfigs[selectedProvider].prompt
+              (selectedProvider !== "sddx" && !modelConfigs[selectedProvider].prompt)
             }
             className="evaluate-btn"
           >
@@ -868,6 +1008,11 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                             <summary>View Raw Output</summary>
                             <pre>{result.rawOutput}</pre>
                           </details>
+
+                          <details className="raw-input">
+                            <summary>View Raw Input</summary>
+                            <pre>{result.rawInput}</pre>
+                          </details>
                         </div>
                       ))}
                     </div>
@@ -941,6 +1086,11 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                           <details className="raw-output">
                             <summary>View Raw Output</summary>
                             <pre>{result.rawOutput}</pre>
+                          </details>
+
+                          <details className="raw-input">
+                            <summary>View Raw Input</summary>
+                            <pre>{result.rawInput}</pre>
                           </details>
                         </div>
                       ))}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import OpenAI from 'openai';
 import { useMutation, gql } from '@apollo/client';
+import { documentGenerator } from './utils/DocumentGenerator';
 
 interface Patient {
   id: string;
@@ -212,14 +213,33 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
       const [firstName, ...lastNameParts] = patient.full_name.split(' ');
       const lastName = lastNameParts.join(' ');
       
-      // Create metadata object with race/ethnicity and condition info
+      // Generate SOAP document for the patient
+      let soapData = { subjective: '', objective: '' };
+      try {
+        const soapDocument = await documentGenerator.generateSOAPDocument({
+          disease: patient.condition || 'General Health Check',
+          patientAge: parseInt(patient.age),
+          patientGender: patient.gender,
+          patientRace: patient.race_ethnicity
+        });
+        soapData = {
+          subjective: soapDocument.subjective,
+          objective: soapDocument.objective
+        };
+      } catch (error) {
+        console.warn('Failed to generate SOAP document:', error);
+      }
+      
+      // Create metadata object with race/ethnicity, condition info, and SOAP data
       const metadata = JSON.stringify({
         primary_race: patient.race_ethnicity,
         secondary_race: patient.secondary_race_ethnicity,
         condition: patient.condition,
         generated_patient: true,
         generated_at: new Date().toISOString(),
-        demographic_source: 'AI_generated'
+        demographic_source: 'AI_generated',
+        subjective: soapData.subjective,
+        objective: soapData.objective
       });
 
       const response = await createClient({
