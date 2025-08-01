@@ -1271,3 +1271,85 @@ select,
     }
   }
 }
+
+// Model Configuration Section Enhancements
+.model-config-section {
+  margin-bottom: 20px;
+  
+  .model-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: $background-secondary;
+    @include sharp-box;
+    cursor: pointer;
+    transition: $transition-fast;
+    border-left: $border-width-heavy solid transparent;
+
+    &:hover {
+      background: $gray-100;
+      border-left-color: $primary-color;
+    }
+
+    h2 {
+      @include heading-secondary;
+      margin: 0;
+      font-size: 1.3em;
+      color: $text-primary;
+    }
+
+    .collapse-indicator {
+      @include technical-label;
+      font-size: 20px;
+      font-weight: bold;
+      color: $text-muted;
+      transition: $transition-fast;
+      min-width: 24px;
+      text-align: center;
+      user-select: none;
+    }
+
+    &:hover .collapse-indicator {
+      color: $primary-color;
+      transform: scale(1.1);
+    }
+  }
+
+  &.collapsed .model-config-header {
+    border-left-color: $primary-color;
+    background: $gray-50;
+  }
+
+  .model-tabs {
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+  }
+}
+
+.selected-model-summary {
+  padding: 15px;
+  background: $background-secondary;
+  @include sharp-box;
+  margin-bottom: 20px;
+  border-left: $border-width-heavy solid $primary-color;
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .label {
+      @include technical-label;
+      color: $text-muted;
+      font-size: 0.9em;
+    }
+
+    .value {
+      @include body-text;
+      font-weight: 600;
+      color: $primary-color;
+      font-size: 0.95em;
+    }
+  }
+}
