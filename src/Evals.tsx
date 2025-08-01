@@ -189,10 +189,10 @@ const parseBasetenModels = (): BasetenModel[] => {
 };
 
 const evaluateReasoning = async (reasoning: string, condition: string) => {
+  condition = "strep throat";
   console.log("Reasoning:", reasoning);
 
   // Convert space-separated condition name to underscore-separated format
-  condition = "strep throat";
   const formattedCondition = condition.replace(/\s+/g, '_').toLowerCase();
 
   // Find the rubric for the given condition
@@ -212,7 +212,7 @@ Rubric Criteria: ${JSON.stringify(rubric.criteria)}
 
 Rubric Scoring Rules: ${JSON.stringify(rubric.scoring_rules)}
 
-Provide a summary of the evaluation in a bullet pointed list, breaking down each turn in the reasoning and evaulate how it conforms to the rubric.`;
+Provide a clear, concise, summary of the evaluation in a bullet pointed list. Do not go over three bullet points. breaking down each turn in the reasoning and evaulate how it conforms to the rubric. Please be concise and offer constructive feedback`;
 
     // Connect to OpenAI client
     const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
@@ -239,6 +239,37 @@ Provide a summary of the evaluation in a bullet pointed list, breaking down each
     }
   } else {
     console.log(`No rubric found for condition: ${condition}`);
+  }
+};
+
+const evalScore = async (patient: Patient, parsedDifferentials: Differential[]) => {
+  const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+  if (!openAIKey) {
+    console.error("OpenAI API key not configured.");
+    return false;
+  }
+
+  const model = new ChatOpenAI({
+    modelName: "gpt-4o",
+    temperature: 0.7,
+    apiKey: openAIKey,
+  });
+
+  const differentialNames = parsedDifferentials.map(diff => diff.condition).join(', ');
+  const prompt = `Given the diagnosis "${patient.diagnosis}" and the differential list: ${differentialNames}, determine if the diagnosis is present in the list, even if by a different name. Respond with "positive" if it is present, otherwise respond with "negative".`;
+
+  try {
+    const response = await model.invoke([
+      { role: "user", content: prompt }
+    ]);
+
+    // Check if the word 'positive' is in any of the messages
+    const result = response.text.includes("Positive");
+    console.log("Eval POSITIVE OR NOT:", response.text)
+    return result;
+  } catch (error) {
+    console.error("Error determining evalScore:", error);
+    return false;
   }
 };
 
@@ -323,9 +354,10 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
         typeof patient.metadata === "string"
           ? JSON.parse(patient.metadata)
           : patient.metadata;
+      console.log("SOAP Data:", metadata.subjective);
       return {
-        subjective: metadata.subjective || metadata.subjectiveFindings || "",
-        objective: metadata.objective || metadata.objectiveMeasurements || ""
+        subjective: metadata.subjective || "",
+        objective: metadata.objective || ""
       };
     }
     return { subjective: "", objective: "" };
@@ -634,12 +666,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
       });
 
       // Check if original condition is in the differential list
-      const evalScore = parsedDifferentials.some((diff: Differential) =>
-        diff.condition
-          .toLowerCase()
-          .includes(patient.diagnosis!.toLowerCase()) &&
-        diff.conclusion === "positive"
-      );
+      const evalScoreResult = await evalScore(patient, parsedDifferentials);
 
       return {
         patientId: patient.id,
@@ -649,7 +676,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
         rawInput: modelProvider === "sddx" ? `Patient Data: ${patientDataString}\nMedical Summary: ${medicalSummary}` : fullPrompt,
         rawOutput,
         parsedDifferentials,
-        evalScore,
+        evalScore: evalScoreResult,
         reasoningEvaluations, // Include the evaluations in the return
         timestamp: new Date(),
       };

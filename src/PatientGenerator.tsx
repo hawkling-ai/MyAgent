@@ -15,6 +15,8 @@ interface Patient {
   dob: string;
   created_at: string;
   condition?: string;
+  subjective?: string; // Added for SOAP document
+  objective?: string; // Added for SOAP document
 }
 
 interface PatientGeneratorProps {
@@ -213,23 +215,6 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
       const [firstName, ...lastNameParts] = patient.full_name.split(' ');
       const lastName = lastNameParts.join(' ');
       
-      // Generate SOAP document for the patient
-      let soapData = { subjective: '', objective: '' };
-      try {
-        const soapDocument = await documentGenerator.generateSOAPDocument({
-          disease: patient.condition || 'General Health Check',
-          patientAge: parseInt(patient.age),
-          patientGender: patient.gender,
-          patientRace: patient.race_ethnicity
-        });
-        soapData = {
-          subjective: soapDocument.subjective,
-          objective: soapDocument.objective
-        };
-      } catch (error) {
-        console.warn('Failed to generate SOAP document:', error);
-      }
-      
       // Create metadata object with race/ethnicity, condition info, and SOAP data
       const metadata = JSON.stringify({
         primary_race: patient.race_ethnicity,
@@ -238,8 +223,8 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
         generated_patient: true,
         generated_at: new Date().toISOString(),
         demographic_source: 'AI_generated',
-        subjective: soapData.subjective,
-        objective: soapData.objective
+        subjective: patient.subjective || '',
+        objective: patient.objective || ''
       });
 
       const response = await createClient({
@@ -334,11 +319,37 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
       const distribution = await getDemographicDistribution(condition);
       setIsLoadingDistribution(false);
       
-      // Generate patients based on the distribution
-      const generatedPatients: Patient[] = [];
-      for (let i = 0; i < numberOfPatients; i++) {
-        generatedPatients.push(generateRandomPatient(i, distribution));
-      }
+      // Generate patients based on the distribution concurrently
+      const generatedPatients: Patient[] = await Promise.all(
+        Array.from({ length: numberOfPatients }, (_, i) => generateRandomPatient(i, distribution))
+      );
+      
+      // Generate SOAP documents concurrently
+      const soapDocuments = await Promise.all(
+        generatedPatients.map(async (patient) => {
+          try {
+            const soapDocument = await documentGenerator.generateSOAPDocument({
+              disease: patient.condition || 'General Health Check',
+              patientAge: parseInt(patient.age),
+              patientGender: patient.gender,
+              patientRace: patient.race_ethnicity
+            });
+            return {
+              subjective: soapDocument.subjective,
+              objective: soapDocument.objective
+            };
+          } catch (error) {
+            console.warn('Failed to generate SOAP document:', error);
+            return { subjective: '', objective: '' };
+          }
+        })
+      );
+
+      // Assign SOAP data to patients
+      generatedPatients.forEach((patient, index) => {
+        patient.subjective = soapDocuments[index].subjective;
+        patient.objective = soapDocuments[index].objective;
+      });
       
       // Always save patients to Healthie API
       if (providerId) {
