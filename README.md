@@ -1,33 +1,89 @@
-This is the triage tester system.
+# Patient Management System
 
-# System Data Flow
+This is a simple patient management system built on top of [the Healthie API](https://docs.gethealthie.com).
+The system allows healthcare providers to view a comprehensive list of their patients with demographic information including age, gender, ethnicity, and race.
 
-Conditions are sent to a patient generator. The patient generator creates some demographic of patient (age, sex, weight, pre-existing conditions, ...) that fits that condition (e.g. ectopic pregnancy would be female, Huntington's disease would be younger than 70, ...). Given a patient, that would be sent to a "Presentation Generation" system that would figure out how that specific condition would present as, along with any other possible co-occuring conditions. This patient and condition(s) presentation would then be used to answer questions given by the triage system.
+# Usage
 
-The triage system takes a Q&A of a medical intake and generates a list of differentials for the convo. The differential list should include both the most likely conditions but also the riskiest conditions that should be ruled out or have been ruled out should be in the differential.
+First, make sure you have a Healthie API key and account. If you don't have one, you can go to https://gethealthie.com/api to request access
 
-Then, the inputs and outptus of the system are sent to a bsic eval system that has a list of patient profiles and "X is presenting with ..." presentation breifs -- paired with the ddx output of the triage system.
+Second, clone the repository to your computer, and install dependencies.
 
-# System Descriptions
+```bash
+git clone https://github.com/healthie/healthie_sample_booking_widget.git
+cd healthie_sample_booking_widget
+npm install
+```
 
-## Patient Generator
+Third, to enable AI-powered demographic generation, create a `.env` file in the root directory and add your OpenAI API key:
 
-Given a condition and other set of patient constraints, generate a random patient that logically might have that condition. Should output probabililty distributions on the different patient attributes.
+```bash
+REACT_APP_OPENAI_API_KEY=your_openai_api_key_here
+```
 
-## Presentation Generation
+Get your API key from: https://platform.openai.com/api-keys
 
-Given a sample patient described by their demographic and H&P and CC, generate a comprehensive set of sx/exam findings that could be found. There should be a distribution of sx described, which then gets sent to a random dicerolling system to select the exact set of sx presenting.
+Note: You can optionally provide a provider ID via URL params (e.g., `?provider_id=123`) to filter patients, though the system will show all active patients by default. 
 
-## Triage System (given through API)
+To run the project locally, just do
 
-Q&A in, ddx out. Black box to evaluate.
+```bash
+npm start
+```
+# Deploying
 
-## Differential Evaluation
+By default, the root URL points to Healthie's sandbox API servers. If you want to run this patient management system against your production instance, make sure to adjust src/config/rootUrl.ts
 
-Dead simple, kind of like NER metrics but just checking that the ddx list contains all the required dx as specified in the eval set. Extra dx are penalized, but captured in a separate metric.
+When you are ready to deploy, you can run
+
+```bash
+npm build
+```
 
 
-# Data Provided
+This will generate a hostable build that can be hosted with any static website host.
+We really like Netlify and S3/Cloudfront ourselves.
 
-conditions.txt contains the list of covered conditions that we want to test against.
-intake.txt contains a list of sample dimensions for patient generation.
+## Features
+
+- View comprehensive patient list with demographic information
+- Display patient age, gender, ethnicity, and race data
+- **AI-Powered Patient Generation**: Uses ChatGPT to get realistic demographic distributions for specific medical conditions
+- **Persistent Patient Storage**: Option to save generated patients directly to your Healthie account via API
+- Generate test patients with medically accurate demographic profiles
+- Clean, responsive design for easy navigation
+- Real-time patient data from Healthie API
+- Toggle between real and generated patient data
+- Race/ethnicity data stored in patient metadata for generated patients
+
+## Limitations
+
+This patient management system is meant to be a simple example and displays basic patient information.
+It has simplified error handling and focuses on read-only patient data display.  
+
+
+## Support
+- Our website: https://gethealthie.com/
+- For public issues and bugs please use the GitHub Issues Page.
+- For enquiries and private issues reach out to us at hello@gethealthie.com
+
+### Submitting a PR
+
+We welcome any contributions! Please create an issue before submitting a pull request.
+
+When creating a pull request, be sure to include a screenshot! 🎨
+
+## License
+
+MIT © Healthie Inc
+
+
+
+
+
+
+
+
+
+
+
