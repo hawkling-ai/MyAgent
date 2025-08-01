@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   useQuery,
@@ -35,7 +36,6 @@ const BULK_ARCHIVE_CLIENTS = gql`
     }
   }
 `;
-
 interface Patient {
   id: string;
   full_name: string;

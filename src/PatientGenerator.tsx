@@ -59,17 +59,6 @@ const lastNames = [
   'Flores', 'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell'
 ];
 
-const genders = ['Male', 'Female', 'Non-binary', 'Other'];
-
-const raceEthnicityOptions = [
-  'American Indian or Alaska Native',
-  'Asian',
-  'Black or African American',
-  'Hispanic or Latino',
-  'Middle Eastern or North African',
-  'Native Hawaiian or Pacific Islander',
-  'White'
-];
 
 // GraphQL mutation to create a client in Healthie
 const CREATE_CLIENT = gql`
@@ -225,11 +214,12 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
       
       // Create metadata object with race/ethnicity and condition info
       const metadata = JSON.stringify({
-        race_ethnicity: patient.race_ethnicity,
-        secondary_race_ethnicity: patient.secondary_race_ethnicity,
+        primary_race: patient.race_ethnicity,
+        secondary_race: patient.secondary_race_ethnicity,
         condition: patient.condition,
         generated_patient: true,
-        generated_at: new Date().toISOString()
+        generated_at: new Date().toISOString(),
+        demographic_source: 'AI_generated'
       });
 
       const response = await createClient({
