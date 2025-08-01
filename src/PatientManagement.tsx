@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import PatientList from './PatientList';
 import PatientGenerator from './PatientGenerator';
-import PatientEHR from './PatientEHR';
 
 interface Patient {
   id: string;
@@ -28,8 +27,6 @@ interface PatientManagementProps {
 
 function PatientManagement({ providerId }: PatientManagementProps) {
   const refreshPatientListRef = React.useRef<(() => void) | undefined>(undefined);
-  const [currentView, setCurrentView] = useState<'list' | 'ehr'>('list');
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   const handlePatientsGenerated = (patients: Patient[]) => {
     console.log(`Generated ${patients.length} patients and saved to Healthie`);
@@ -44,47 +41,25 @@ function PatientManagement({ providerId }: PatientManagementProps) {
     refreshPatientListRef.current = refetchFn;
   }, []);
 
-  const handlePatientClick = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setCurrentView('ehr');
-  };
-
-  const handleBackToList = () => {
-    setCurrentView('list');
-    setSelectedPatient(null);
-  };
-
   return (
     <div className="patient-management">
-      {currentView === 'list' ? (
-        <>
-          <div className="patient-management__header">
-            <h1>Clinical Data Analytics Platform</h1>
-            <p>Advanced medical data visualization and analysis for AI research</p>
-            
-            <div className="patient-management__controls">
-              <PatientGenerator 
-                onPatientsGenerated={handlePatientsGenerated} 
-                providerId={providerId}
-                onRefreshPatientList={refreshPatientListRef.current}
-              />
-            </div>
-          </div>
-          
-          <PatientList 
+      <div className="patient-management__header">
+        <h1>Clinical Data Analytics Platform</h1>
+        <p>Advanced medical data visualization and analysis for AI research</p>
+        
+        <div className="patient-management__controls">
+          <PatientGenerator 
+            onPatientsGenerated={handlePatientsGenerated} 
             providerId={providerId}
-            onRefetchReady={handleRefetchReady}
-            onPatientClick={handlePatientClick}
+            onRefreshPatientList={refreshPatientListRef.current}
           />
-        </>
-      ) : (
-        selectedPatient && (
-          <PatientEHR 
-            patient={selectedPatient}
-            onBack={handleBackToList}
-          />
-        )
-      )}
+        </div>
+      </div>
+      
+      <PatientList 
+        providerId={providerId}
+        onRefetchReady={handleRefetchReady}
+      />
     </div>
   );
 }

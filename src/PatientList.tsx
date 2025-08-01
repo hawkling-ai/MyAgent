@@ -1,12 +1,11 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   useQuery,
   useMutation,
   gql
 } from "@apollo/client";
-import { documentGenerator, DocumentGenerationOptions } from './utils/DocumentGenerator';
-import type { SOAPNote } from './PatientEHR';
 
 const GET_PATIENTS = gql`
   query GetPatients {
@@ -39,7 +38,6 @@ const BULK_ARCHIVE_CLIENTS = gql`
   }
 `;
 
-// Extend the Patient interface to include soapDocument
 interface Patient {
   id: string;
   full_name: string;
@@ -57,22 +55,19 @@ interface Patient {
   dob: string;
   created_at: string;
   condition?: string;
-  soapDocument?: SOAPNote; // Added for pre-filled SOAP document
 }
 
 interface PatientListProps {
   providerId: string;
   onRefetchReady?: (refetch: () => void) => void;
-  onPatientClick?: (patient: Patient) => void;
 }
 
-function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientListProps) {
+function PatientList({ providerId, onRefetchReady }: PatientListProps) {
   const { loading, error, data, refetch } = useQuery(GET_PATIENTS);
   const [bulkArchiveClients] = useMutation(BULK_ARCHIVE_CLIENTS);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [conditionFilter, setConditionFilter] = useState<string>('');
-  const [loadingPatientId, setLoadingPatientId] = useState<string | null>(null); // New state for loading
 
   // Helper function to extract race/ethnicity from patient data
   const extractRaceEthnicity = (patient: any) => {
@@ -145,40 +140,6 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirmation(false);
-    }
-  };
-
-  // Function to generate and validate SOAP document
-  const generateAndValidateSOAPDocument = async (patient: Patient) => {
-    const condition = extractCondition(patient);
-    const options: DocumentGenerationOptions = {
-      disease: condition,
-      patientAge: parseInt(patient.age, 10),
-      patientGender: patient.gender,
-      patientRace: patient.primary_race || 'Not specified',
-      validateDocument: true
-    };
-
-    try {
-      const document = await documentGenerator.generateSOAPDocument(options);
-      return document;
-    } catch (error) {
-      console.error('Failed to generate valid SOAP document:', error);
-      return null;
-    }
-  };
-
-  // Update onPatientClick to generate SOAP document
-  const handlePatientClick = async (patient: Patient) => {
-    if (onPatientClick) {
-      setLoadingPatientId(patient.id); // Set loading state
-      const soapDocument = await generateAndValidateSOAPDocument(patient);
-      setLoadingPatientId(null); // Clear loading state
-      if (soapDocument) {
-        onPatientClick({ ...patient, soapDocument });
-      } else {
-        alert('Failed to generate a valid SOAP document for this patient.');
-      }
     }
   };
 
@@ -374,16 +335,6 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
       
       {filteredPatients.length > 0 && (
         <>
-          {onPatientClick && (
-            <p style={{ 
-              fontSize: '13px', 
-              color: '#666', 
-              marginBottom: '10px',
-              fontStyle: 'italic'
-            }}>
-              Click any subject name to view their clinical record
-            </p>
-          )}
           <div className="patient-list__table">
             <table>
           <thead>
@@ -408,46 +359,31 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                 <tr 
                   key={patient.id} 
                   className="patient-row"
-                  onClick={() => handlePatientClick(patient)}
-                  style={{
-                    cursor: onPatientClick ? 'pointer' : 'default',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (onPatientClick) {
-                      e.currentTarget.style.backgroundColor = '#f0f0f0';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (onPatientClick) {
-                      e.currentTarget.style.backgroundColor = '';
-                    }
-                  }}
                 >
                   <td className="patient-name">
-                    <strong 
+                    <Link 
+                      to={`/patient/${patient.id}`}
                       style={{ 
-                        textDecoration: onPatientClick ? 'underline' : 'none',
-                        cursor: onPatientClick ? 'pointer' : 'default',
+                        textDecoration: 'underline',
+                        color: '#000',
+                        fontWeight: 'bold',
                         display: 'inline-block',
                         padding: '4px 8px',
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        if (onPatientClick) {
-                          e.currentTarget.style.backgroundColor = '#000';
-                          e.currentTarget.style.color = '#fff';
-                        }
+                        e.currentTarget.style.backgroundColor = '#000';
+                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.textDecoration = 'none';
                       }}
                       onMouseLeave={(e) => {
-                        if (onPatientClick) {
-                          e.currentTarget.style.backgroundColor = '';
-                          e.currentTarget.style.color = '';
-                        }
+                        e.currentTarget.style.backgroundColor = '';
+                        e.currentTarget.style.color = '#000';
+                        e.currentTarget.style.textDecoration = 'underline';
                       }}
                     >
                       {patient.full_name || 'N/A'}
-                    </strong>
+                    </Link>
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
@@ -458,29 +394,6 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                     }}>
                       {condition}
                     </span>
-                    {loadingPatientId === patient.id && (
-                      <div className="loading-popup" style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        zIndex: 1000
-                      }}>
-                        <div style={{
-                          backgroundColor: 'white',
-                          padding: '20px',
-                          borderRadius: '5px',
-                          boxShadow: '0 0 10px rgba(0, 0, 0, 0.3)'
-                        }}>
-                          <div className="loading-spinner">Loading...</div>
-                        </div>
-                      </div>
-                    )}
                   </td>
                   <td>{raceEthnicityData.race_ethnicity}</td>
                   <td>{raceEthnicityData.secondary_race_ethnicity}</td>

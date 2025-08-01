@@ -197,6 +197,9 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   const [selectedBasetenModel, setSelectedBasetenModel] = useState<string>(
     availableBasetenModels.length > 0 ? availableBasetenModels[0].id : ""
   );
+  
+  // Model Configuration section collapse state
+  const [modelConfigCollapsed, setModelConfigCollapsed] = useState(false);
 
   const { loading, error, data } = useQuery(GET_PATIENTS);
 
@@ -284,6 +287,17 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
       ...prev,
       [provider]: { ...prev[provider], prompt },
     }));
+  };
+
+  // Handle model provider selection (no auto-collapse)
+  const handleProviderSelection = (provider: 'openai' | 'anthropic' | 'baseten') => {
+    setSelectedProvider(provider);
+    // Don't auto-collapse - let user manually control with +/- button
+  };
+
+  // Toggle model configuration section collapse
+  const toggleModelConfigSection = () => {
+    setModelConfigCollapsed(!modelConfigCollapsed);
   };
 
   // No longer needed - using structured output
@@ -523,9 +537,16 @@ Patient Data:
       <div className="evals-layout">
         {/* Left Pane - Model Configuration */}
         <div className="evals-left-pane">
-          <h2>Model Configuration</h2>
-
-          <div className="model-tabs">
+          <div className={`model-config-section ${modelConfigCollapsed ? 'collapsed' : 'expanded'}`}>
+            <div className="model-config-header" onClick={toggleModelConfigSection}>
+              <h2>Model Configuration</h2>
+              <div className="collapse-indicator">
+                {modelConfigCollapsed ? '+' : '−'}
+              </div>
+            </div>
+            
+            {!modelConfigCollapsed && (
+              <div className="model-tabs">
             {/* OpenAI Tab */}
             <div
               className={`model-tab ${
@@ -534,7 +555,7 @@ Patient Data:
             >
               <button
                 className="model-tab-header"
-                onClick={() => setSelectedProvider("openai")}
+                onClick={() => handleProviderSelection('openai')}
               >
                 <span className="provider-name">OpenAI</span>
                 <span className="model-name">GPT-4o</span>
@@ -566,7 +587,7 @@ Patient Data:
             >
               <button
                 className="model-tab-header"
-                onClick={() => setSelectedProvider("anthropic")}
+                onClick={() => handleProviderSelection('anthropic')}
               >
                 <span className="provider-name">Anthropic</span>
                 <span className="model-name">Claude 4 Sonnet</span>
@@ -598,7 +619,7 @@ Patient Data:
             >
               <button
                 className="model-tab-header"
-                onClick={() => setSelectedProvider("baseten")}
+                onClick={() => handleProviderSelection('baseten')}
               >
                 <span className="provider-name">Baseten</span>
                 <span className="model-name">
@@ -670,7 +691,25 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                 </div>
               )}
             </div>
+              </div>
+            )}
           </div>
+
+          {/* Selected Model Summary (shown when collapsed) */}
+          {modelConfigCollapsed && (
+            <div className="selected-model-summary">
+              <div className="summary-item">
+                <span className="label">Selected Model:</span>
+                <span className="value">
+                  {selectedProvider === 'openai' && 'OpenAI GPT-4o'}
+                  {selectedProvider === 'anthropic' && 'Anthropic Claude 4 Sonnet'}
+                  {selectedProvider === 'baseten' && (
+                    availableBasetenModels.find(m => m.id === selectedBasetenModel)?.name || 'Baseten Model'
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Patient Selection */}
           <div className="patient-selection">

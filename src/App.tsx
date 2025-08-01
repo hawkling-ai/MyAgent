@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import "./App.scss";
 import PatientManagement from "./PatientManagement";
 import Evals from "./Evals";
+import PatientEHRWrapper from "./PatientEHRWrapper";
 
 function parseQuery(queryString: string) {
   var query: any = {};
@@ -40,6 +41,10 @@ function App() {
             element={<PatientManagement providerId={providerId} />}
           />
           <Route path="/evals" element={<Evals providerId={providerId} />} />
+          <Route 
+            path="/patient/:id" 
+            element={<PatientEHRWrapper providerId={providerId} />} 
+          />
         </Routes>
       </div>
     </Router>

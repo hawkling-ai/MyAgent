@@ -30,20 +30,6 @@ export interface SOAPNote {
 }
 
 function PatientEHR({ patient, onBack }: PatientEHRProps) {
-  // Helper function to encrypt patient name for privacy
-  const encryptPatientName = (name: string): string => {
-    if (!name) return 'N/A';
-    
-    // Simple encryption: Base64 encoding + character substitution for display
-    const base64 = btoa(name);
-    // Add some visual obfuscation while keeping it readable for demo purposes
-    const encrypted = base64
-      .replace(/[A-Z]/g, (char) => String.fromCharCode(((char.charCodeAt(0) - 65 + 7) % 26) + 65))
-      .replace(/[a-z]/g, (char) => String.fromCharCode(((char.charCodeAt(0) - 97 + 7) % 26) + 97))
-      .substring(0, 12) + '***';
-    
-    return `[ENCRYPTED] ${encrypted}`;
-  };
 
   // Helper function to extract race/ethnicity from patient data
   const extractRaceEthnicity = (patient: Patient) => {
@@ -133,17 +119,14 @@ function PatientEHR({ patient, onBack }: PatientEHRProps) {
             e.currentTarget.style.color = '#000';
           }}
         >
-          ← Back to Clinical Subject Registry
+          ← Back to Patient List
         </button>
         <h1 style={{ margin: 0, color: '#fff' }}>
           Electronic Clinical Record
         </h1>
         <h2 style={{ margin: '5px 0 0 0', color: '#fff', fontWeight: 'normal' }}>
-          {encryptPatientName(patient.full_name)}
+          {patient.full_name}
         </h2>
-        <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#ccc', fontStyle: 'italic' }}>
-          Subject identity encrypted per HIPAA compliance protocols
-        </p>
       </div>
 
       <div className="patient-ehr__content" style={{
@@ -176,7 +159,7 @@ function PatientEHR({ patient, onBack }: PatientEHRProps) {
             <div className="demo-group">
               <h4 style={{ color: '#000', marginBottom: '15px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>Biometric Data</h4>
               <div className="demo-field" style={{ marginBottom: '10px' }}>
-                <strong>Subject Identifier:</strong> {encryptPatientName(patient.full_name)}
+                <strong>Subject Identifier:</strong> {patient.full_name}
               </div>
               <div className="demo-field" style={{ marginBottom: '10px' }}>
                 <strong>Chronological Age:</strong> {patient.age || 'N/A'}
