@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { gql, useQuery } from '@apollo/client';
+import { z } from 'zod';
+import { ChatOpenAI } from '@langchain/openai';
+import { ChatAnthropic } from '@langchain/anthropic';
 import './App.scss';
 
 interface EvalResult {
@@ -16,6 +19,19 @@ interface Differential {
   condition: string;
   conclusion: 'positive' | 'negative' | 'needs follow-up';
 }
+
+// Zod schema for structured output
+const DifferentialSchema = z.object({
+  condition: z.string().describe('The medical condition being evaluated'),
+  conclusion: z.enum(['positive', 'negative', 'needs follow-up']).describe('Assessment of the condition: positive/likely, negative/unlikely, or needs follow-up')
+});
+
+const DifferentialDiagnosisSchema = z.object({
+  differentials: z.array(DifferentialSchema).describe('List of differential diagnoses with assessments'),
+  reasoning: z.string().describe('Brief explanation of the diagnostic reasoning')
+});
+
+type DifferentialDiagnosis = z.infer<typeof DifferentialDiagnosisSchema>;
 
 interface Patient {
   id: string;
@@ -54,13 +70,20 @@ interface EvalsProps {
   providerId: string;
 }
 
-const DEFAULT_PROMPT = `Given the patient demographics below, provide a differential diagnosis list. 
-For each condition, indicate whether it is:
-- Positive/Likely: High probability based on demographics
-- Negative/Unlikely: Low probability  
-- Needs follow-up: Requires additional testing
+const DEFAULT_PROMPT = `You are a medical diagnostic assistant. Given the patient demographics below, provide a structured differential diagnosis list.
 
-Consider demographic risk factors and prevalence rates when making your assessment.`;
+For each condition in your differential, assess whether it is:
+- Positive: High probability based on demographics and risk factors
+- Negative: Low probability or can be ruled out
+- Needs follow-up: Requires additional testing or information
+
+Consider demographic risk factors, prevalence rates, and epidemiological data when making your assessment.
+
+You must respond with a JSON object containing:
+1. An array of differentials, each with a condition name and conclusion
+2. A brief reasoning explanation
+
+Be comprehensive but focused on conditions relevant to the patient's demographics.`;
 
 const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
@@ -147,59 +170,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
     }));
   };
 
-  const parseDifferentials = (rawOutput: string): Differential[] => {
-    const differentials: Differential[] = [];
-    const lines = rawOutput.split('\n');
-    
-    lines.forEach(line => {
-      // Handle numbered lists
-      const numberedMatch = line.match(/^\d+\.\s*(.+?):\s*(.+)/);
-      if (numberedMatch) {
-        const condition = numberedMatch[1].trim();
-        const assessment = numberedMatch[2].toLowerCase();
-        
-        if (assessment.includes('positive') || assessment.includes('likely') || assessment.includes('confirmed')) {
-          differentials.push({ condition, conclusion: 'positive' });
-        } else if (assessment.includes('negative') || assessment.includes('unlikely') || assessment.includes('ruled out')) {
-          differentials.push({ condition, conclusion: 'negative' });
-        } else if (assessment.includes('follow') || assessment.includes('uncertain') || assessment.includes('possible')) {
-          differentials.push({ condition, conclusion: 'needs follow-up' });
-        }
-        return;
-      }
-      
-      // Handle bullet points
-      const bulletMatch = line.match(/^[-*•]\s*(.+?):\s*(.+)/);
-      if (bulletMatch) {
-        const condition = bulletMatch[1].trim();
-        const assessment = bulletMatch[2].toLowerCase();
-        
-        if (assessment.includes('positive') || assessment.includes('likely') || assessment.includes('confirmed')) {
-          differentials.push({ condition, conclusion: 'positive' });
-        } else if (assessment.includes('negative') || assessment.includes('unlikely') || assessment.includes('ruled out')) {
-          differentials.push({ condition, conclusion: 'negative' });
-        } else if (assessment.includes('follow') || assessment.includes('uncertain') || assessment.includes('possible')) {
-          differentials.push({ condition, conclusion: 'needs follow-up' });
-        }
-        return;
-      }
-      
-      // Original regex patterns as fallback
-      const positiveMatch = line.match(/(\w+[\w\s]*):?\s*(positive|likely|confirmed)/i);
-      const negativeMatch = line.match(/(\w+[\w\s]*):?\s*(negative|unlikely|ruled out)/i);
-      const followUpMatch = line.match(/(\w+[\w\s]*):?\s*(follow[- ]up|uncertain|possible)/i);
-      
-      if (positiveMatch) {
-        differentials.push({ condition: positiveMatch[1].trim(), conclusion: 'positive' });
-      } else if (negativeMatch) {
-        differentials.push({ condition: negativeMatch[1].trim(), conclusion: 'negative' });
-      } else if (followUpMatch) {
-        differentials.push({ condition: followUpMatch[1].trim(), conclusion: 'needs follow-up' });
-      }
-    });
-    
-    return differentials;
-  };
+  // No longer needed - using structured output
 
   const evaluatePatient = async (patient: Patient, modelProvider: string): Promise<EvalResult> => {
     const config = modelConfigs[modelProvider];
@@ -217,14 +188,10 @@ Patient Data:
 - Age: ${patientData.age}
 - Gender: ${patientData.gender}
 - Ethnicity: ${patientData.ethnicity}
-- Race: ${patientData.race}
-
-Please provide a differential diagnosis list. For each condition, indicate whether it is:
-- Positive/Likely: High probability based on demographics
-- Negative/Unlikely: Low probability
-- Needs follow-up: Requires additional testing`;
+- Race: ${patientData.race}`;
 
     try {
+      let structuredOutput: DifferentialDiagnosis;
       let rawOutput = '';
       
       if (modelProvider === 'openai') {
@@ -233,30 +200,21 @@ Please provide a differential diagnosis list. For each condition, indicate wheth
           throw new Error('OpenAI API key not configured. Please add REACT_APP_OPENAI_API_KEY to your .env file');
         }
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openAIKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4-turbo-preview',
-            messages: [
-              { role: 'system', content: 'You are a medical diagnostic assistant. Provide differential diagnoses based on patient demographics.' },
-              { role: 'user', content: fullPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 500
-          })
+        const model = new ChatOpenAI({
+          modelName: 'gpt-4o',
+          temperature: 0.7,
+          apiKey: openAIKey,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
-        }
+        const structuredModel = model.withStructuredOutput(DifferentialDiagnosisSchema);
+        
+        const result = await structuredModel.invoke([
+          { role: 'system', content: 'You are a medical diagnostic assistant. Always respond with structured JSON output.' },
+          { role: 'user', content: fullPrompt }
+        ]);
 
-        const data = await response.json();
-        rawOutput = data.choices[0].message.content;
+        structuredOutput = result;
+        rawOutput = JSON.stringify(result, null, 2);
         
       } else if (modelProvider === 'anthropic') {
         const claudeKey = process.env.REACT_APP_CLAUDE_API_KEY;
@@ -264,32 +222,26 @@ Please provide a differential diagnosis list. For each condition, indicate wheth
           throw new Error('Claude API key not configured. Please add REACT_APP_CLAUDE_API_KEY to your .env file');
         }
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': claudeKey,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            messages: [
-              { role: 'user', content: fullPrompt }
-            ],
-            max_tokens: 500
-          })
+        const model = new ChatAnthropic({
+          modelName: 'claude-sonnet-4-20250514',
+          temperature: 0.7,
+          apiKey: claudeKey,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Claude API error: ${errorData.error?.message || response.statusText}`);
-        }
+        const structuredModel = model.withStructuredOutput(DifferentialDiagnosisSchema);
+        
+        const result = await structuredModel.invoke([
+          { role: 'user', content: fullPrompt }
+        ]);
 
-        const data = await response.json();
-        rawOutput = data.content[0].text;
+        structuredOutput = result;
+        rawOutput = JSON.stringify(result, null, 2);
+      } else {
+        throw new Error('Invalid model provider');
       }
 
-      const parsedDifferentials = parseDifferentials(rawOutput);
+      // Extract differentials from structured output
+      const parsedDifferentials = structuredOutput.differentials;
       
       // Check if original condition is in the differential list
       const evalScore = parsedDifferentials.some(
@@ -371,7 +323,7 @@ Please provide a differential diagnosis list. For each condition, indicate wheth
                 onClick={() => setSelectedProvider('openai')}
               >
                 <span className="provider-name">OpenAI</span>
-                <span className="model-name">GPT-4 Turbo</span>
+                <span className="model-name">GPT-4o</span>
               </button>
               
               {selectedProvider === 'openai' && (
@@ -397,7 +349,7 @@ Please provide a differential diagnosis list. For each condition, indicate wheth
                 onClick={() => setSelectedProvider('anthropic')}
               >
                 <span className="provider-name">Anthropic</span>
-                <span className="model-name">Claude 3.5 Sonnet</span>
+                <span className="model-name">Claude 4 Sonnet</span>
               </button>
               
               {selectedProvider === 'anthropic' && (
@@ -526,6 +478,23 @@ Please provide a differential diagnosis list. For each condition, indicate wheth
                       <summary>View Raw Output</summary>
                       <pre>{result.rawOutput}</pre>
                     </details>
+                    
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(result.rawOutput);
+                        if (parsed.reasoning) {
+                          return (
+                            <div className="reasoning-section">
+                              <h4>Diagnostic Reasoning</h4>
+                              <p>{parsed.reasoning}</p>
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        // Not JSON or no reasoning field
+                      }
+                      return null;
+                    })()}
                   </div>
                 ))}
               </div>

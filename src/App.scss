@@ -1134,6 +1134,26 @@ select,
             word-wrap: break-word;
           }
         }
+
+        .reasoning-section {
+          margin-top: 15px;
+          padding: 15px;
+          background: $background-secondary;
+          border-left: $border-width-thick solid $primary-color;
+
+          h4 {
+            @include technical-label;
+            margin-bottom: 8px;
+            color: $text-primary;
+          }
+
+          p {
+            @include body-text;
+            margin: 0;
+            font-size: 0.9em;
+            line-height: 1.5;
+          }
+        }
       }
     }
 
