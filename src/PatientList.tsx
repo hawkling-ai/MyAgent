@@ -448,16 +448,6 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                     >
                       {patient.full_name || 'N/A'}
                     </strong>
-                    {onPatientClick && loadingPatientId !== patient.id && (
-                      <span style={{
-                        fontSize: '12px',
-                        color: '#666',
-                        marginLeft: '8px',
-                        fontWeight: 'normal'
-                      }}>
-                        (Click to view Clinical Record)
-                      </span>
-                    )}
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
