@@ -196,76 +196,52 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   return (
     <div className="patient-list">
       <div className="patient-list__header">
-        <div className="patient-list__header-content">
+        <div className="patient-list__header-top">
           <h2>
             Active Clinical Subjects ({filteredPatients.length}
             {conditionFilter && ` filtered by ${conditionFilter}`}
             {conditionFilter && allPatients.length !== filteredPatients.length && ` of ${allPatients.length} total`})
           </h2>
-          
-          {/* Condition Filter */}
-          {uniqueConditions.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <label htmlFor="condition-filter" style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                Filter by Condition:
-              </label>
-              <select
-                id="condition-filter"
-                value={conditionFilter}
-                onChange={(e) => setConditionFilter(e.target.value)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid #ccc',
-                  fontSize: '14px',
-                  minWidth: '200px'
-                }}
-              >
-                <option value="">All Conditions</option>
-                {uniqueConditions.map(condition => (
-                  <option key={condition} value={condition}>
-                    {condition}
-                  </option>
-                ))}
-              </select>
-              {conditionFilter && (
-                <button
-                  onClick={() => setConditionFilter('')}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    border: '1px solid #ccc',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '3px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear Filter
-                </button>
-              )}
-            </div>
-          )}
-          
           {allPatients.length > 0 && (
             <button
               className="delete-all-patients-btn"
               onClick={() => setShowDeleteConfirmation(true)}
               disabled={isDeleting}
-              style={{
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                padding: '10px 20px',
-                cursor: isDeleting ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                opacity: isDeleting ? 0.6 : 1
-              }}
             >
               {isDeleting ? 'Archiving...' : 'Archive All Data'}
             </button>
           )}
         </div>
+        
+        {/* Condition Filter */}
+        {uniqueConditions.length > 0 && (
+          <div className="condition-filter-container">
+            <label htmlFor="condition-filter" className="filter-label">
+              Filter by Condition:
+            </label>
+            <select
+              id="condition-filter"
+              className="filter-dropdown"
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value)}
+            >
+              <option value="">All Conditions</option>
+              {uniqueConditions.map(condition => (
+                <option key={condition} value={condition}>
+                  {condition}
+                </option>
+              ))}
+            </select>
+            {conditionFilter && (
+              <button
+                onClick={() => setConditionFilter('')}
+                className="clear-filter-btn"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Confirmation Dialog */}
@@ -357,8 +333,19 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
       )}
       
       {filteredPatients.length > 0 && (
-        <div className="patient-list__table">
-        <table>
+        <>
+          {onPatientClick && (
+            <p style={{ 
+              fontSize: '13px', 
+              color: '#666', 
+              marginBottom: '10px',
+              fontStyle: 'italic'
+            }}>
+              Click any subject name to view their clinical record
+            </p>
+          )}
+          <div className="patient-list__table">
+            <table>
           <thead>
             <tr>
               <th>Subject ID</th>
@@ -398,22 +385,29 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                   }}
                 >
                   <td className="patient-name">
-                    <strong style={{ 
-                      color: onPatientClick ? '#000' : 'inherit',
-                      textDecoration: onPatientClick ? 'underline' : 'none'
-                    }}>
+                    <strong 
+                      style={{ 
+                        textDecoration: onPatientClick ? 'underline' : 'none',
+                        cursor: onPatientClick ? 'pointer' : 'default',
+                        display: 'inline-block',
+                        padding: '4px 8px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (onPatientClick) {
+                          e.currentTarget.style.backgroundColor = '#000';
+                          e.currentTarget.style.color = '#fff';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (onPatientClick) {
+                          e.currentTarget.style.backgroundColor = '';
+                          e.currentTarget.style.color = '';
+                        }
+                      }}
+                    >
                       {patient.full_name || 'N/A'}
                     </strong>
-                    {onPatientClick && (
-                      <span style={{
-                        fontSize: '12px',
-                        color: '#666',
-                        marginLeft: '8px',
-                        fontWeight: 'normal'
-                      }}>
-                        (Click to view Clinical Record)
-                      </span>
-                    )}
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
@@ -440,7 +434,8 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
             })}
           </tbody>
         </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
