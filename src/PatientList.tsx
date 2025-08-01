@@ -65,6 +65,7 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
   const [bulkArchiveClients] = useMutation(BULK_ARCHIVE_CLIENTS);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [conditionFilter, setConditionFilter] = useState<string>('');
 
   // Helper function to extract race/ethnicity from patient data
   const extractRaceEthnicity = (patient: any) => {
@@ -86,6 +87,19 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
       race_ethnicity: primaryRace || 'Not Available',
       secondary_race_ethnicity: secondaryRace || 'Not Available'
     };
+  };
+
+  // Helper function to extract condition from patient metadata
+  const extractCondition = (patient: any): string => {
+    if (patient.metadata) {
+      try {
+        const metadata = JSON.parse(patient.metadata);
+        return metadata.condition || 'Not Available';
+      } catch (error) {
+        console.warn('Failed to parse patient metadata:', error);
+      }
+    }
+    return 'Not Available';
   };
 
   // Function to archive all patients
@@ -155,9 +169,21 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
     );
   }
 
-  const patients: Patient[] = data?.users || [];
+  const allPatients: Patient[] = data?.users || [];
 
-  if (patients.length === 0) {
+  // Get unique conditions for filter dropdown
+  const uniqueConditions = Array.from(new Set(
+    allPatients
+      .map(patient => extractCondition(patient))
+      .filter(condition => condition !== 'Not Available')
+  )).sort();
+
+  // Filter patients based on condition filter
+  const filteredPatients = conditionFilter === '' 
+    ? allPatients 
+    : allPatients.filter(patient => extractCondition(patient) === conditionFilter);
+
+  if (allPatients.length === 0) {
     return (
       <div className="patient-list__empty">
         <h3>No patients found</h3>
@@ -170,8 +196,56 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
     <div className="patient-list">
       <div className="patient-list__header">
         <div className="patient-list__header-content">
-          <h2>Active Patients ({patients.length})</h2>
-          {patients.length > 0 && (
+          <h2>
+            Active Patients ({filteredPatients.length}
+            {conditionFilter && ` filtered by ${conditionFilter}`}
+            {conditionFilter && allPatients.length !== filteredPatients.length && ` of ${allPatients.length} total`})
+          </h2>
+          
+          {/* Condition Filter */}
+          {uniqueConditions.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <label htmlFor="condition-filter" style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                Filter by Condition:
+              </label>
+              <select
+                id="condition-filter"
+                value={conditionFilter}
+                onChange={(e) => setConditionFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '5px',
+                  border: '1px solid #ccc',
+                  fontSize: '14px',
+                  minWidth: '200px'
+                }}
+              >
+                <option value="">All Conditions</option>
+                {uniqueConditions.map(condition => (
+                  <option key={condition} value={condition}>
+                    {condition}
+                  </option>
+                ))}
+              </select>
+              {conditionFilter && (
+                <button
+                  onClick={() => setConditionFilter('')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    border: '1px solid #ccc',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+          )}
+          
+          {allPatients.length > 0 && (
             <button
               className="delete-all-patients-btn"
               onClick={() => setShowDeleteConfirmation(true)}
@@ -226,7 +300,7 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
               ⚠️ Archive All Patients
             </h3>
             <p style={{ marginBottom: '20px', lineHeight: '1.6' }}>
-              <strong>This will archive ALL {patients.length} active patients!</strong>
+              <strong>This will archive ALL {allPatients.length} active patients!</strong>
             </p>
             <p style={{ marginBottom: '30px', lineHeight: '1.6', color: '#666' }}>
               Archived patients will no longer appear in the active patient list but can be recovered by setting their status back to active. This action cannot be undone easily.
@@ -263,14 +337,38 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
           </div>
         </div>
       )}
+
+      {/* Show message when no patients match filter */}
+      {filteredPatients.length === 0 && allPatients.length > 0 && (
+        <div className="patient-list__empty">
+          <h3>No patients found for "{conditionFilter}"</h3>
+          <p>Try selecting a different condition or clearing the filter.</p>
+          <button
+            onClick={() => setConditionFilter('')}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
       
-      <div className="patient-list__table">
+      {filteredPatients.length > 0 && (
+        <div className="patient-list__table">
         <table>
           <thead>
             <tr>
               <th>Name</th>
               <th>Age</th>
               <th>Gender</th>
+              <th>Condition</th>
               <th>Race/Ethnicity</th>
               <th>Secondary Race/Ethnicity</th>
               <th>Email</th>
@@ -280,8 +378,9 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
             </tr>
           </thead>
           <tbody>
-            {patients.map((patient) => {
+            {filteredPatients.map((patient) => {
               const raceEthnicityData = extractRaceEthnicity(patient);
+              const condition = extractCondition(patient);
               return (
                 <tr key={patient.id} className="patient-row">
                   <td className="patient-name">
@@ -289,6 +388,18 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
+                  <td>
+                    <span style={{ 
+                      backgroundColor: condition !== 'Not Available' ? '#e7f3ff' : '#f8f9fa',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      fontWeight: condition !== 'Not Available' ? 'bold' : 'normal',
+                      color: condition !== 'Not Available' ? '#0066cc' : '#666'
+                    }}>
+                      {condition}
+                    </span>
+                  </td>
                   <td>{raceEthnicityData.race_ethnicity}</td>
                   <td>{raceEthnicityData.secondary_race_ethnicity}</td>
                   <td>{patient.email || 'N/A'}</td>
@@ -300,7 +411,8 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
             })}
           </tbody>
         </table>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
