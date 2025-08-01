@@ -5,6 +5,24 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import DemographicInsights from "./DemographicInsights";
 import "./App.scss";
+import rubricDataJson from './rubrics/diagnostic_rubric_prototypes.json';
+
+
+// Define a type for the rubric data with an index signature
+interface Rubric {
+  rubric_name: string;
+  condition: string;
+  criteria: { name: string; description: string; }[];
+  scoring_rules: { [key: string]: string; };
+  references: string[];
+}
+
+interface RubricData {
+  [key: string]: Rubric;
+}
+
+// Import the rubric data with the defined type
+const rubricData = rubricDataJson as RubricData;
 
 interface EvalResult {
   patientId: string;
@@ -16,6 +34,7 @@ interface EvalResult {
   parsedDifferentials: Differential[];
   evalScore: boolean;
   timestamp: Date;
+  reasoningEvaluations: any[];
 }
 
 interface Differential {
@@ -167,6 +186,60 @@ const parseBasetenModels = (): BasetenModel[] => {
   }
 
   return models;
+};
+
+const evaluateReasoning = async (reasoning: string, condition: string) => {
+  console.log("Reasoning:", reasoning);
+
+  // Convert space-separated condition name to underscore-separated format
+  condition = "strep throat";
+  const formattedCondition = condition.replace(/\s+/g, '_').toLowerCase();
+
+  // Find the rubric for the given condition
+  const rubric = rubricData[formattedCondition];
+
+  if (rubric) {
+    console.log(`Comparing reasoning for condition: ${condition}`);
+    console.log("Rubric Criteria:", rubric.criteria);
+    console.log("Rubric Scoring Rules:", rubric.scoring_rules);
+
+    // Prepare the prompt for OpenAI
+    const prompt = `You are helping train an AI diagnostic tool on its ability to reason about diagnosing medical conditions. You have a medically standard rubric used by physicians to diagnose the specific condition that the patient has. See if the AI model's reasoning similar logic as the rubric and generate a summary of findings.
+
+Reasoning: ${reasoning}
+
+Rubric Criteria: ${JSON.stringify(rubric.criteria)}
+
+Rubric Scoring Rules: ${JSON.stringify(rubric.scoring_rules)}
+
+Provide a summary of the evaluation in a bullet pointed list, breaking down each turn in the reasoning and evaulate how it conforms to the rubric.`;
+
+    // Connect to OpenAI client
+    const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+    if (!openAIKey) {
+      console.error("OpenAI API key not configured.");
+      return;
+    }
+
+    const model = new ChatOpenAI({
+      modelName: "gpt-4o",
+      temperature: 0.7,
+      apiKey: openAIKey,
+    });
+
+    try {
+      const response = await model.invoke([
+        { role: "user", content: prompt }
+      ]);
+      console.log("Evaluation Summary:", response);
+      // Output the summary of the evaluation
+      return response["content"];
+    } catch (error) {
+      console.error("Error evaluating reasoning:", error);
+    }
+  } else {
+    console.log(`No rubric found for condition: ${condition}`);
+  }
 };
 
 const Evals: React.FC<EvalsProps> = ({ providerId }) => {
@@ -362,7 +435,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
     let medicalSummary = "";
 
     try {
-      let structuredOutput: DifferentialDiagnosis;
+      let structuredOutput: DifferentialDiagnosis = { differentials: [] };
       let rawOutput = "";
 
       if (modelProvider === "openai") {
@@ -383,16 +456,16 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
           DifferentialDiagnosisSchema
         );
 
-        const result = await structuredModel.invoke([
+        const result = (await structuredModel.invoke([
           {
             role: "system",
             content:
               "You are a medical diagnostic assistant. Always respond with structured JSON output.",
           },
           { role: "user", content: fullPrompt },
-        ]);
+        ])) as DifferentialDiagnosis;
 
-        structuredOutput = result;
+        structuredOutput = result || { differentials: [] };
         rawOutput = JSON.stringify(result, null, 2);
       } else if (modelProvider === "anthropic") {
         const claudeKey = process.env.REACT_APP_CLAUDE_API_KEY;
@@ -412,7 +485,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
           DifferentialDiagnosisSchema
         );
 
-        const result = await structuredModel.invoke([
+        const result: DifferentialDiagnosis = await structuredModel.invoke([
           { role: "user", content: fullPrompt },
         ]);
 
@@ -547,14 +620,25 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
 
       // Extract differentials from structured output
       const parsedDifferentials = structuredOutput.differentials;
+      console.log('Parsed Differentials:', parsedDifferentials);
+      const reasoningEvaluations: any[] = await Promise.all(
+        parsedDifferentials.map(async (differential: Differential) => {
+          const evaluation = await evaluateReasoning(differential.reasoning, differential.condition);
+          console.log('Evaluation for', differential.condition, ':', evaluation);
+          return evaluation;
+        })
+      );
+      console.log('Reasoning Evaluations:', reasoningEvaluations);
+      reasoningEvaluations.forEach((evaluation, index) => {
+        console.log(`Evaluation ${index}:`, evaluation);
+      });
 
       // Check if original condition is in the differential list
-      const evalScore = parsedDifferentials.some(
-        (diff) =>
-          diff.condition
-            .toLowerCase()
-            .includes(patient.diagnosis!.toLowerCase()) &&
-          diff.conclusion === "positive"
+      const evalScore = parsedDifferentials.some((diff: Differential) =>
+        diff.condition
+          .toLowerCase()
+          .includes(patient.diagnosis!.toLowerCase()) &&
+        diff.conclusion === "positive"
       );
 
       return {
@@ -566,6 +650,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
         rawOutput,
         parsedDifferentials,
         evalScore,
+        reasoningEvaluations, // Include the evaluations in the return
         timestamp: new Date(),
       };
     } catch (error) {
@@ -581,6 +666,7 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
             ? error.message
             : "Failed to get model response"
         }`,
+        reasoningEvaluations: [],
         parsedDifferentials: [],
         evalScore: false,
         timestamp: new Date(),
@@ -1015,6 +1101,17 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                             )}
                           </details>
 
+                          <details className="reasoning-evaluation">
+                            <summary>Reasoning Evaluation</summary>
+                            <ul className="reasoning-list">
+                              {result.reasoningEvaluations.map((evaluation, i) => (
+                                <li key={i} className="reasoning-item">
+                                  <div className="reasoning-text">{evaluation}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+
                           <details className="raw-output">
                             <summary>View Raw Output</summary>
                             <pre>{result.rawOutput}</pre>
@@ -1092,6 +1189,17 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                             ) : (
                               <p className="no-differentials">No differentials parsed</p>
                             )}
+                          </details>
+
+                          <details className="reasoning-evaluation">
+                            <summary>Reasoning Evaluation</summary>
+                            <ul className="reasoning-list">
+                              {result.reasoningEvaluations.map((evaluation, i) => (
+                                <li key={i} className="reasoning-item">
+                                  <div className="reasoning-text">{evaluation}</div>
+                                </li>
+                              ))}
+                            </ul>
                           </details>
 
                           <details className="raw-output">
