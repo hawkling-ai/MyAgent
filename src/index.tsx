@@ -38,7 +38,7 @@ const client = new ApolloClient({
   cache: new InMemoryCache()
 });
 
-const container = document.getElementById('patient-management-app')!;
+const container = document.getElementById('clinical-analytics-root')!;
 const root = createRoot(container);
 
 root.render(

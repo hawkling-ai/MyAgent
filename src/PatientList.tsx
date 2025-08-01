@@ -106,7 +106,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   // Function to archive all patients
   const handleDeleteAllPatients = async () => {
     if (!data?.users || data.users.length === 0) {
-      alert('No patients to delete');
+      alert('No clinical subjects to delete');
       return;
     }
 
@@ -125,17 +125,17 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
       });
 
       if (response.data?.bulkUpdateClients?.messages?.length > 0) {
-        console.error('Errors archiving patients:', response.data.bulkUpdateClients.messages);
-        alert('Some patients could not be archived. Check console for details.');
+        console.error('Errors archiving clinical subjects:', response.data.bulkUpdateClients.messages);
+        alert('Some clinical subjects could not be archived. Check console for details.');
       } else {
-        alert(`Successfully archived ${patientIds.length} patients!`);
+        alert(`Successfully archived ${patientIds.length} clinical subjects!`);
       }
       
-      // Refresh the patient list
+      // Refresh the clinical subject list
       refetch();
     } catch (error) {
-      console.error('Error archiving patients:', error);
-      alert('Failed to archive patients. Check console for details.');
+      console.error('Error archiving clinical subjects:', error);
+      alert('Failed to archive clinical subjects. Check console for details.');
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirmation(false);
@@ -156,7 +156,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   if (loading) {
     return (
       <div className="patient-list__loading">
-        <h3>Loading patients...</h3>
+        <h3>Loading clinical data...</h3>
       </div>
     );
   }
@@ -164,7 +164,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   if (error) {
     return (
       <div className="patient-list__error">
-        <h3>Error loading patients</h3>
+        <h3>Error loading clinical data</h3>
         <p>{error.message}</p>
       </div>
     );
@@ -187,8 +187,8 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
   if (allPatients.length === 0) {
     return (
       <div className="patient-list__empty">
-        <h3>No patients found</h3>
-        <p>This provider has no active patients. Generate some test patients to see them here.</p>
+        <h3>No clinical data available</h3>
+        <p>No active subjects in the dataset. Generate synthetic clinical data for analysis.</p>
       </div>
     );
   }
@@ -198,7 +198,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
       <div className="patient-list__header">
         <div className="patient-list__header-content">
           <h2>
-            Active Patients ({filteredPatients.length}
+            Active Clinical Subjects ({filteredPatients.length}
             {conditionFilter && ` filtered by ${conditionFilter}`}
             {conditionFilter && allPatients.length !== filteredPatients.length && ` of ${allPatients.length} total`})
           </h2>
@@ -256,14 +256,13 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                 color: 'white',
                 border: 'none',
                 padding: '10px 20px',
-                borderRadius: '5px',
                 cursor: isDeleting ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 opacity: isDeleting ? 0.6 : 1
               }}
             >
-              {isDeleting ? 'Archiving...' : '🗑️ Archive All Patients'}
+              {isDeleting ? 'Archiving...' : 'Archive All Data'}
             </button>
           )}
         </div>
@@ -291,20 +290,19 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
             style={{
               backgroundColor: 'white',
               padding: '30px',
-              borderRadius: '10px',
               maxWidth: '500px',
               width: '90%',
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
             }}
           >
             <h3 style={{ color: '#dc3545', marginBottom: '20px' }}>
-              ⚠️ Archive All Patients
+              Archive All Clinical Data
             </h3>
             <p style={{ marginBottom: '20px', lineHeight: '1.6' }}>
-              <strong>This will archive ALL {allPatients.length} active patients!</strong>
+              <strong>This will archive ALL {allPatients.length} clinical subjects from the active dataset!</strong>
             </p>
             <p style={{ marginBottom: '30px', lineHeight: '1.6', color: '#666' }}>
-              Archived patients will no longer appear in the active patient list but can be recovered by setting their status back to active. This action cannot be undone easily.
+              Archived data will be removed from the active dataset but can be recovered by updating the status flag. This operation is reversible through data recovery protocols.
             </p>
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
               <button
@@ -313,7 +311,6 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                   padding: '10px 20px',
                   border: '1px solid #ccc',
                   backgroundColor: 'white',
-                  borderRadius: '5px',
                   cursor: 'pointer'
                 }}
               >
@@ -327,12 +324,11 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                   backgroundColor: '#dc3545',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '5px',
                   cursor: isDeleting ? 'not-allowed' : 'pointer',
                   opacity: isDeleting ? 0.6 : 1
                 }}
               >
-                {isDeleting ? 'Archiving...' : 'Yes, Archive All Patients'}
+                {isDeleting ? 'Archiving...' : 'Confirm Archive Operation'}
               </button>
             </div>
           </div>
@@ -342,16 +338,15 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
       {/* Show message when no patients match filter */}
       {filteredPatients.length === 0 && allPatients.length > 0 && (
         <div className="patient-list__empty">
-          <h3>No patients found for "{conditionFilter}"</h3>
+          <h3>No clinical subjects found for "{conditionFilter}"</h3>
           <p>Try selecting a different condition or clearing the filter.</p>
           <button
             onClick={() => setConditionFilter('')}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#007bff',
+              backgroundColor: '#000',
               color: 'white',
               border: 'none',
-              borderRadius: '5px',
               cursor: 'pointer',
               fontSize: '14px'
             }}
@@ -366,16 +361,16 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
         <table>
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Subject ID</th>
               <th>Age</th>
-              <th>Gender</th>
+              <th>Biological Sex</th>
               <th>Condition</th>
-              <th>Race/Ethnicity</th>
-              <th>Secondary Race/Ethnicity</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Date of Birth</th>
-              <th>Patient Since</th>
+              <th>Primary Demographics</th>
+              <th>Secondary Demographics</th>
+              <th>Contact Email</th>
+              <th>Contact Phone</th>
+              <th>Birth Date</th>
+              <th>Enrollment Date</th>
             </tr>
           </thead>
           <tbody>
@@ -393,7 +388,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                   }}
                   onMouseEnter={(e) => {
                     if (onPatientClick) {
-                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.backgroundColor = '#f0f0f0';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -404,7 +399,7 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                 >
                   <td className="patient-name">
                     <strong style={{ 
-                      color: onPatientClick ? '#007bff' : 'inherit',
+                      color: onPatientClick ? '#000' : 'inherit',
                       textDecoration: onPatientClick ? 'underline' : 'none'
                     }}>
                       {patient.full_name || 'N/A'}
@@ -412,11 +407,11 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                     {onPatientClick && (
                       <span style={{
                         fontSize: '12px',
-                        color: '#6c757d',
+                        color: '#666',
                         marginLeft: '8px',
                         fontWeight: 'normal'
                       }}>
-                        (Click to view EHR)
+                        (Click to view Clinical Record)
                       </span>
                     )}
                   </td>
@@ -424,12 +419,12 @@ function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientList
                   <td>{patient.gender || 'N/A'}</td>
                   <td>
                     <span style={{ 
-                      backgroundColor: condition !== 'Not Available' ? '#e7f3ff' : '#f8f9fa',
+                      backgroundColor: condition !== 'Not Available' ? '#f0f0f0' : '#fafafa',
                       padding: '4px 8px',
-                      borderRadius: '4px',
                       fontSize: '13px',
                       fontWeight: condition !== 'Not Available' ? 'bold' : 'normal',
-                      color: condition !== 'Not Available' ? '#0066cc' : '#666'
+                      color: condition !== 'Not Available' ? '#000' : '#666',
+                      border: condition !== 'Not Available' ? '1px solid #000' : '1px solid #ccc'
                     }}>
                       {condition}
                     </span>

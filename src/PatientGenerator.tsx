@@ -93,11 +93,11 @@ const getOpenAIClient = () => {
   });
 };
 
-// Function to get demographic distribution from ChatGPT
+// Function to get demographic distribution from AI model
 const getDemographicDistribution = async (condition: string): Promise<DemographicDistribution> => {
   const client = getOpenAIClient();
   
-  const prompt = `Please provide the demographic distribution for patients diagnosed with ${condition}. 
+  const prompt = `Please provide the demographic distribution for subjects diagnosed with ${condition}. 
   
   Return the data in the following JSON format:
   {
@@ -132,7 +132,7 @@ const getDemographicDistribution = async (condition: string): Promise<Demographi
       messages: [
         {
           role: "system",
-          content: "You are a medical epidemiologist with access to demographic data about various medical conditions. Provide accurate demographic distributions based on real medical data."
+          content: "You are a clinical data scientist with access to epidemiological datasets. Provide accurate demographic distributions based on empirical clinical research data."
         },
         {
           role: "user",
@@ -302,7 +302,7 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
 
   const handleGeneratePatients = async () => {
     if (!condition.trim() || numberOfPatients <= 0) {
-      alert('Please enter a valid condition and number of patients');
+      alert('Please specify a valid pathological condition and dataset size');
       return;
     }
 
@@ -337,22 +337,22 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
         setIsSavingToHealthie(false);
         
         if (savedCount === generatedPatients.length) {
-          alert(`✅ Successfully saved all ${savedCount} patients to Healthie!`);
+          alert(`Successfully persisted all ${savedCount} clinical records to the database.`);
           // Refresh the patient list to show newly created patients
           if (onRefreshPatientList) {
             setTimeout(() => onRefreshPatientList(), 500); // Small delay to ensure DB is updated
           }
         } else if (savedCount > 0) {
-          alert(`⚠️ Saved ${savedCount} out of ${generatedPatients.length} patients to Healthie. Some patients may have failed to save.`);
+          alert(`Persisted ${savedCount} out of ${generatedPatients.length} clinical records. Some data points failed to persist.`);
           // Still refresh if some patients were saved
           if (onRefreshPatientList) {
             setTimeout(() => onRefreshPatientList(), 500);
           }
         } else {
-          alert(`❌ Failed to save patients to Healthie. Please check the console for errors.`);
+          alert(`Failed to persist clinical data to the database. Check console for detailed error logs.`);
         }
       } else {
-        alert(`⚠️ No provider ID provided. Patients generated but not saved to Healthie.`);
+        alert(`No provider ID specified. Clinical data generated but not persisted to database.`);
       }
       
       onPatientsGenerated(generatedPatients);
@@ -366,9 +366,9 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
       console.error('Error generating patients:', error);
       
       if (error instanceof Error && error.message.includes('OpenAI API key')) {
-        alert('OpenAI API key not configured. Please set REACT_APP_OPENAI_API_KEY environment variable.\n\nUsing default demographic distributions for now.');
+        alert('AI model API key not configured. Set REACT_APP_OPENAI_API_KEY environment variable.\n\nDefaulting to baseline demographic distributions.');
       } else {
-        alert('Error generating patients with AI demographics. Using default distributions.');
+        alert('Error retrieving AI-based demographic parameters. Defaulting to baseline distributions.');
       }
       
       // Generate with default distribution as fallback
@@ -415,22 +415,22 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
         setIsSavingToHealthie(false);
         
         if (savedCount === generatedPatients.length) {
-          alert(`✅ Successfully saved all ${savedCount} patients to Healthie!`);
+          alert(`Successfully persisted all ${savedCount} clinical records to the database.`);
           // Refresh the patient list to show newly created patients
           if (onRefreshPatientList) {
             setTimeout(() => onRefreshPatientList(), 500); // Small delay to ensure DB is updated
           }
         } else if (savedCount > 0) {
-          alert(`⚠️ Saved ${savedCount} out of ${generatedPatients.length} patients to Healthie. Some patients may have failed to save.`);
+          alert(`Persisted ${savedCount} out of ${generatedPatients.length} clinical records. Some data points failed to persist.`);
           // Still refresh if some patients were saved
           if (onRefreshPatientList) {
             setTimeout(() => onRefreshPatientList(), 500);
           }
         } else {
-          alert(`❌ Failed to save patients to Healthie. Please check the console for errors.`);
+          alert(`Failed to persist clinical data to the database. Check console for detailed error logs.`);
         }
       } else {
-        alert(`⚠️ No provider ID provided. Patients generated but not saved to Healthie.`);
+        alert(`No provider ID specified. Clinical data generated but not persisted to database.`);
       }
       
       onPatientsGenerated(generatedPatients);
@@ -446,14 +446,14 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
         className="generate-patients-btn" 
         onClick={() => setIsModalOpen(true)}
       >
-        Generate Test Patients
+        Generate Synthetic Clinical Data
       </button>
 
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Generate Test Patients</h3>
+              <h3>Generate Synthetic Clinical Subjects</h3>
               <button 
                 className="modal-close" 
                 onClick={() => setIsModalOpen(false)}
@@ -465,13 +465,13 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
             <div className="modal-body">
               <div className="ai-info">
                 <p className="ai-description">
-                  🤖 This tool uses AI to get realistic demographic distributions for the specified medical condition, 
-                  then generates patients that match real-world epidemiological data.
+                  This system leverages AI models to retrieve accurate demographic distributions for the specified pathological condition, 
+                  synthesizing clinical subjects that align with empirical epidemiological datasets.
                 </p>
               </div>
               
               <div className="form-group">
-                <label htmlFor="condition">Medical Condition:</label>
+                <label htmlFor="condition">Pathological Condition:</label>
                 <input
                   id="condition"
                   type="text"
@@ -484,7 +484,7 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
               </div>
               
               <div className="form-group">
-                <label htmlFor="numberOfPatients">Number of Patients:</label>
+                <label htmlFor="numberOfPatients">Dataset Size:</label>
                 <input
                   id="numberOfPatients"
                   type="number"
@@ -500,26 +500,26 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
               {providerId && (
                 <div className="form-group">
                   <div className="info-message">
-                    <p>💾 Generated patients will be automatically saved to your Healthie account.</p>
+                    <p>Generated clinical data will be automatically persisted to the Healthie API endpoint.</p>
                   </div>
                 </div>
               )}
               
               {isLoadingDistribution && (
                 <div className="loading-status">
-                  <p>🔍 Getting demographic data...</p>
+                  <p>Retrieving demographic parameters from AI model...</p>
                 </div>
               )}
               
               {isGenerating && !isLoadingDistribution && !isSavingToHealthie && (
                 <div className="loading-status">
-                  <p>👥 Generating patients based on AI demographics...</p>
+                  <p>Synthesizing clinical subjects based on demographic parameters...</p>
                 </div>
               )}
               
               {isSavingToHealthie && (
                 <div className="loading-status">
-                  <p>💾 Saving patients to Healthie API...</p>
+                  <p>Persisting clinical data to API endpoint...</p>
                 </div>
               )}
             </div>
@@ -537,7 +537,7 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
                 onClick={handleGeneratePatients}
                 disabled={isGenerating}
               >
-                {isGenerating ? 'Generating...' : 'Generate Patients'}
+                {isGenerating ? 'Processing...' : 'Generate Dataset'}
               </button>
             </div>
           </div>

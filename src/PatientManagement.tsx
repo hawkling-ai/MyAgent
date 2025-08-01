@@ -59,8 +59,8 @@ function PatientManagement({ providerId }: PatientManagementProps) {
       {currentView === 'list' ? (
         <>
           <div className="patient-management__header">
-            <h1>Patient Management System</h1>
-            <p>Manage and view your patients</p>
+            <h1>Clinical Data Analytics Platform</h1>
+            <p>Advanced medical data visualization and analysis for AI research</p>
             
             <div className="patient-management__controls">
               <PatientGenerator 

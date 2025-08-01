@@ -15,13 +15,19 @@ cd healthie_sample_booking_widget
 npm install
 ```
 
-Third, to enable AI-powered demographic generation, create a `.env` file in the root directory and add your OpenAI API key:
+Third, to enable AI-powered features, create a `.env` file in the root directory and add your API keys:
 
 ```bash
+# For patient generation (required)
 REACT_APP_OPENAI_API_KEY=your_openai_api_key_here
+
+# For medical agent evaluation (optional)
+REACT_APP_CLAUDE_API_KEY=your_claude_api_key_here
 ```
 
-Get your API key from: https://platform.openai.com/api-keys
+Get your API keys from:
+- OpenAI: https://platform.openai.com/api-keys
+- Anthropic Claude: https://console.anthropic.com/settings/keys
 
 Note: You can optionally provide a provider ID via URL params (e.g., `?provider_id=123`) to filter patients, though the system will show all active patients by default. 
 
@@ -55,6 +61,11 @@ We really like Netlify and S3/Cloudfront ourselves.
 - Real-time patient data from Healthie API
 - Toggle between real and generated patient data
 - Race/ethnicity data stored in patient metadata for generated patients
+- **Medical Agent Evaluation**: New /evals page for testing medical decision-making agents
+  - Support for OpenAI GPT-4 and Anthropic Claude models
+  - Evaluate agent accuracy on differential diagnosis generation
+  - Compare agent outputs against known patient conditions
+  - Detailed scoring and performance metrics
 
 ## Limitations
 

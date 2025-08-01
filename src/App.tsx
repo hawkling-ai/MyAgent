@@ -1,6 +1,8 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.scss';
 import PatientManagement from './PatientManagement'
+import Evals from './Evals'
 
 function parseQuery(queryString: string) {
     var query: any = {};
@@ -22,9 +24,18 @@ function App() {
  const providerId = queryVariables.provider_id || "3635795" // Your Healthie user ID
 
   return (
-    <div className="App">
-      <PatientManagement providerId={providerId} />
-    </div>
+    <Router>
+      <div className="App">
+        <nav style={{ padding: '20px', borderBottom: '1px solid #e0e0e0' }}>
+          <Link to="/" style={{ marginRight: '20px' }}>Patient Management</Link>
+          <Link to="/evals">Evals</Link>
+        </nav>
+        <Routes>
+          <Route path="/" element={<PatientManagement providerId={providerId} />} />
+          <Route path="/evals" element={<Evals providerId={providerId} />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
