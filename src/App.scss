@@ -20,6 +20,57 @@ body {
   color: $text-secondary;
 }
 
+// Custom scrollbar styling - applies to all scrollbars except html/body
+.patient-list__table,
+.evals-left-pane,
+.evals-right-pane,
+.patient-list-container,
+.modal-content,
+div[style*="overflow"],
+*:not(html):not(body) {
+  &::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $secondary-white;
+    border: $border-width solid $primary-color;
+    border-radius: 0 !important;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $primary-color;
+    border: none;
+    border-radius: 0 !important;
+    
+    &:hover {
+      background: $gray-800;
+    }
+    
+    &:active {
+      background: $gray-700;
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: $secondary-white;
+    border: $border-width solid $primary-color;
+    border-radius: 0 !important;
+  }
+}
+
+// Firefox scrollbar styling for non-root elements
+.patient-list__table,
+.evals-left-pane,
+.evals-right-pane,
+.patient-list-container,
+.modal-content,
+div[style*="overflow"] {
+  scrollbar-width: auto;
+  scrollbar-color: $primary-color $secondary-white;
+}
+
 // Utility classes
 .has-text-centered {
   text-align: center;
@@ -56,19 +107,20 @@ body {
 // Navigation
 nav {
   background: $background-dark;
-  padding: 20px;
+  padding: 12px 20px;
   border-bottom: $border-width-thick solid $primary-color;
   display: flex;
-  gap: 30px;
+  gap: 20px;
   align-items: center;
   
   a {
     @include technical-label;
     color: $text-inverse;
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 6px 14px;
     border: $border-width-thin solid transparent;
     transition: $transition-fast;
+    font-size: 0.85rem;
     
     &:hover {
       border-color: $secondary-white;
@@ -692,7 +744,7 @@ select,
 // Evals Page Styles
 .evals-container {
   padding: 20px;
-  height: calc(100vh - 61px); // Adjust for nav height
+  height: calc(100vh - 50px); // Adjust for nav height
   overflow: hidden;
 
   .evals-layout {

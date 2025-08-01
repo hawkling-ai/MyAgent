@@ -45,7 +45,7 @@ interface Patient {
 }
 
 interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'baseten';
   prompt: string;
 }
 
@@ -86,10 +86,11 @@ You must respond with a JSON object containing:
 Be comprehensive but focused on conditions relevant to the patient's demographics.`;
 
 const Evals: React.FC<EvalsProps> = ({ providerId }) => {
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'baseten'>('openai');
   const [modelConfigs, setModelConfigs] = useState<Record<string, ModelConfig>>({
     openai: { provider: 'openai', prompt: DEFAULT_PROMPT },
-    anthropic: { provider: 'anthropic', prompt: DEFAULT_PROMPT }
+    anthropic: { provider: 'anthropic', prompt: DEFAULT_PROMPT },
+    baseten: { provider: 'baseten', prompt: DEFAULT_PROMPT }
   });
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [results, setResults] = useState<EvalResult[]>([]);
@@ -236,8 +237,54 @@ Patient Data:
 
         structuredOutput = result;
         rawOutput = JSON.stringify(result, null, 2);
+        
+      } else if (modelProvider === 'baseten') {
+        const basetenKey = process.env.REACT_APP_BASETEN_API_KEY;
+        const basetenModelId = process.env.REACT_APP_BASETEN_MODEL_ID;
+        
+        if (!basetenKey) {
+          throw new Error('Baseten API key not configured. Please add REACT_APP_BASETEN_API_KEY to your .env file');
+        }
+        
+        if (!basetenModelId) {
+          throw new Error('Baseten Model ID not configured. Please add REACT_APP_BASETEN_MODEL_ID to your .env file');
+        }
+
+        const response = await fetch(`https://model-${basetenModelId}.api.baseten.co/v1/predict`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Api-Key ${basetenKey}`
+          },
+          body: JSON.stringify({
+            prompt: fullPrompt + '\n\nRespond with a JSON object containing "differentials" array and "reasoning" string.',
+            max_length: 500,
+            temperature: 0.7,
+            top_p: 0.9
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Baseten API error: ${errorData.error?.message || response.statusText}`);
+        }
+
+        const data = await response.json();
+        rawOutput = data.model_output || data.output || data.text || JSON.stringify(data);
+        
+        // Try to parse Baseten response as structured output
+        try {
+          const parsed = typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput;
+          structuredOutput = DifferentialDiagnosisSchema.parse(parsed);
+        } catch (parseError) {
+          // Fallback: create a basic structure
+          structuredOutput = {
+            differentials: [],
+            reasoning: 'Failed to parse structured response from Baseten model'
+          };
+        }
       } else {
-        throw new Error('Invalid model provider');
+        throw new Error(`Unsupported model provider: ${modelProvider}`);
       }
 
       // Extract differentials from structured output
@@ -363,6 +410,38 @@ Patient Data:
                       className="form-control"
                       rows={8}
                     />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Baseten Tab */}
+            <div className={`model-tab ${selectedProvider === 'baseten' ? 'active' : ''}`}>
+              <button 
+                className="model-tab-header"
+                onClick={() => setSelectedProvider('baseten')}
+              >
+                <span className="provider-name">Baseten</span>
+                <span className="model-name">Open Source Models</span>
+              </button>
+              
+              {selectedProvider === 'baseten' && (
+                <div className="model-tab-content">
+                  <div className="form-group">
+                    <label>Evaluation Prompt</label>
+                    <textarea
+                      value={modelConfigs.baseten.prompt}
+                      onChange={(e) => updateModelConfig('baseten', e.target.value)}
+                      placeholder="Enter your evaluation prompt for medical diagnosis..."
+                      className="form-control"
+                      rows={8}
+                    />
+                  </div>
+                  <div className="baseten-info">
+                    <p className="info-text">
+                      Configure your Baseten model ID in environment variables. 
+                      Supports Llama, Mistral, and other open-source models.
+                    </p>
                   </div>
                 </div>
               )}
