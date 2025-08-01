@@ -77,6 +77,10 @@ export class DocumentGenerator {
 
         const document = this.parseSOAPDocument(content);
 
+        // Exclude Assessment and Plan sections
+        document.assessment = "";
+        document.plan = "";
+
         if (validateDocument) {
           const validationOptions: ValidationOptions = {
             disease,
@@ -136,7 +140,7 @@ RETRY GUIDANCE (Attempt ${attempt + 1}):
 - Use professional medical language throughout
 - Ensure age-appropriate and gender-appropriate content` : '';
 
-    return `Generate a realistic SOAP note for a ${age}-year-old ${gender} patient who presents with clinical findings consistent with ${disease}. 
+    return `Generate a realistic SOAP note for a ${age}-year-old ${gender} patient who presents for a clinical evaluation.
 
 CRITICAL REQUIREMENTS:
 1. ABSOLUTELY DO NOT mention "${disease}", its abbreviations, or common synonyms anywhere in the document
@@ -150,10 +154,20 @@ CRITICAL REQUIREMENTS:
 Format the response as a standard SOAP note with clear sections:
 
 SUBJECTIVE:
-[Patient's chief complaint, history of present illness, review of systems, past medical history, medications, allergies, social history - be specific and personal]
+- Age: ${age} years
+- Gender: ${gender}
+- Reason for Visit: [Specify reason]
+- History of Present Illness: [Symptoms, duration, etc.]
+- Review Of Symptoms/Systems: [Pertinent information]
+- Past Medical History: [Pertinent information]
+- Current Medications: [List medications]
+- Medication Allergies: [List allergies]
+- Social History: [Pertinent information]
+- Family History: [Pertinent information]
 
 OBJECTIVE:
-[Vital signs with specific numbers, physical examination findings, laboratory results if relevant, diagnostic findings]
+- Vital Signs: Height, Weight, Temp, B/P, Pulse
+- Physical Examination: [Detailed findings]
 
 ASSESSMENT:
 [Clinical impression and differential diagnosis - describe the clinical picture WITHOUT naming the specific condition]

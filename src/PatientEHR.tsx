@@ -14,6 +14,7 @@ interface Patient {
   phone_number: string;
   dob: string;
   created_at: string;
+  soapDocument?: SOAPNote; // Added for pre-filled SOAP document
 }
 
 interface PatientEHRProps {
@@ -21,7 +22,7 @@ interface PatientEHRProps {
   onBack: () => void;
 }
 
-interface SOAPNote {
+export interface SOAPNote {
   subjective: string;
   objective: string;
   assessment: string;
@@ -68,22 +69,16 @@ function PatientEHR({ patient, onBack }: PatientEHRProps) {
 
   const raceEthnicityData = extractRaceEthnicity(patient);
 
-  // Initialize SOAP note with pre-filled subjective and objective data
-  const [soapNote, setSoapNote] = useState<SOAPNote>({
-    subjective: "Subject reports optimal functional status. No acute symptomatology reported. Denies pyrexia, rigors, or recent pathogenic exposure. Circadian rhythm maintained with 7-8 hour sleep cycles. Nutritional intake adequate with stable anthropometric measurements. Energy expenditure within normal parameters.",
-    objective: `Vital Signs: BP 120/80, HR 72 bpm, RR 16, Temp 98.6°F, O2 Sat 98% on room air
-
-Clinical Examination:
-- General: Alert, oriented x3, well-appearing, no acute distress
-- HEENT: Normocephalic, atraumatic. PERRL, EOMI. TMs clear bilaterally
-- Neck: Supple, no lymphadenopathy, no thyromegaly
-- Cardiovascular: Regular rate and rhythm, no murmurs, rubs, or gallops
-- Pulmonary: Clear to auscultation bilaterally, no wheezes, rales, or rhonchi
-- Abdomen: Soft, non-tender, non-distended, normal bowel sounds
-- Extremities: No edema, no cyanosis, pulses intact`,
+  // Check if SOAP document is provided
+  const initialSoapNote = patient.soapDocument || {
+    subjective: "",
+    objective: "",
     assessment: "",
     plan: ""
-  });
+  };
+
+  // Initialize SOAP note with provided document or default values
+  const [soapNote, setSoapNote] = useState<SOAPNote>(initialSoapNote);
 
   const formatDate = (dateString: string) => {
     try {

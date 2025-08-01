@@ -49,6 +49,11 @@ interface ModelConfig {
   prompt: string;
 }
 
+interface BasetenModel {
+  id: string;
+  name: string;
+}
+
 const GET_PATIENTS = gql`
   query GetPatients {
     users(active_status: "active", should_paginate: false) {
@@ -104,6 +109,31 @@ Example response:
 
 Be comprehensive but focused on conditions relevant to the patient's demographics.`;
 
+// Function to parse Baseten models from environment variables
+const parseBasetenModels = (): BasetenModel[] => {
+  const models: BasetenModel[] = [];
+  let index = 1;
+  
+  while (true) {
+    const modelId = process.env[`REACT_APP_BASETEN_MODEL_ID_${index}`];
+    if (!modelId) break;
+    
+    // Get custom name or extract from model ID (everything after last '/')
+    const customName = process.env[`REACT_APP_BASETEN_MODEL_NAME_${index}`];
+    const defaultName = modelId.includes('/') ? modelId.split('/').pop() : modelId;
+    const modelName = customName || defaultName || `Model ${index}`;
+    
+    models.push({
+      id: modelId,
+      name: modelName
+    });
+    
+    index++;
+  }
+  
+  return models;
+};
+
 const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'baseten'>('openai');
   const [modelConfigs, setModelConfigs] = useState<Record<string, ModelConfig>>({
@@ -115,6 +145,16 @@ const Evals: React.FC<EvalsProps> = ({ providerId }) => {
   const [results, setResults] = useState<EvalResult[]>([]);
   const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
   const [currentEvalProgress, setCurrentEvalProgress] = useState({ current: 0, total: 0 });
+  
+  // Baseten model management
+  const [availableBasetenModels] = useState<BasetenModel[]>(() => {
+    const models = parseBasetenModels();
+    console.log('🔧 Parsed Baseten models:', models);
+    return models;
+  });
+  const [selectedBasetenModel, setSelectedBasetenModel] = useState<string>(
+    availableBasetenModels.length > 0 ? availableBasetenModels[0].id : ''
+  );
 
   const { loading, error, data } = useQuery(GET_PATIENTS);
 
@@ -259,17 +299,16 @@ Patient Data:
         
       } else if (modelProvider === 'baseten') {
         const basetenKey = process.env.REACT_APP_BASETEN_API_KEY;
-        const basetenModelId = process.env.REACT_APP_BASETEN_MODEL_ID;
         
         if (!basetenKey) {
           throw new Error('Baseten API key not configured. Please add REACT_APP_BASETEN_API_KEY to your .env file');
         }
         
-        if (!basetenModelId) {
-          throw new Error('Baseten Model ID not configured. Please add REACT_APP_BASETEN_MODEL_ID to your .env file');
+        if (!selectedBasetenModel) {
+          throw new Error('No Baseten model selected. Please configure REACT_APP_BASETEN_MODEL_ID_1 in your .env file');
         }
 
-        const response = await fetch(`https://model-${basetenModelId}.api.baseten.co/v1/predict`, {
+        const response = await fetch(`https://model-${selectedBasetenModel}.api.baseten.co/v1/predict`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -441,27 +480,61 @@ Patient Data:
                 onClick={() => setSelectedProvider('baseten')}
               >
                 <span className="provider-name">Baseten</span>
-                <span className="model-name">Open Source Models</span>
+                <span className="model-name">
+                  {availableBasetenModels.length > 0 
+                    ? availableBasetenModels.find(m => m.id === selectedBasetenModel)?.name || 'Select Model'
+                    : 'No Models Configured'
+                  }
+                </span>
               </button>
               
               {selectedProvider === 'baseten' && (
                 <div className="model-tab-content">
-                  <div className="form-group">
-                    <label>Evaluation Prompt</label>
-                    <textarea
-                      value={modelConfigs.baseten.prompt}
-                      onChange={(e) => updateModelConfig('baseten', e.target.value)}
-                      placeholder="Enter your evaluation prompt for medical diagnosis..."
-                      className="form-control"
-                      rows={8}
-                    />
-                  </div>
-                  <div className="baseten-info">
-                    <p className="info-text">
-                      Configure your Baseten model ID in environment variables. 
-                      Supports Llama, Mistral, and other open-source models.
-                    </p>
-                  </div>
+                  {availableBasetenModels.length > 0 ? (
+                    <>
+                      <div className="form-group">
+                        <label>Select Model</label>
+                        <select
+                          value={selectedBasetenModel}
+                          onChange={(e) => setSelectedBasetenModel(e.target.value)}
+                          className="form-control"
+                        >
+                          {availableBasetenModels.map((model) => (
+                            <option key={model.id} value={model.id}>
+                              {model.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="model-info">
+                          <small className="text-muted">
+                            Model ID: {selectedBasetenModel}
+                          </small>
+                        </div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Evaluation Prompt</label>
+                        <textarea
+                          value={modelConfigs.baseten.prompt}
+                          onChange={(e) => updateModelConfig('baseten', e.target.value)}
+                          placeholder="Enter your evaluation prompt for medical diagnosis..."
+                          className="form-control"
+                          rows={8}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="baseten-setup">
+                      <h4>No Baseten Models Configured</h4>
+                      <p>To use Baseten models, add the following to your .env file:</p>
+                      <pre className="config-example">
+{`REACT_APP_BASETEN_API_KEY=your_api_key_here
+REACT_APP_BASETEN_MODEL_ID_1=meta-llama/Llama-4-Scout-17B-16E-Instruct
+REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
+                      </pre>
+                      <p>Add additional models with incrementing numbers (_2, _3, etc.)</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
