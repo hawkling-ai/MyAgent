@@ -60,14 +60,14 @@ $state-focus: $primary-color;
 $state-disabled: $gray-300;
 
 // Alert/Status colors
-$error-color: $secondary-dark-red;
-$error-bg: #fef2f2;
-$success-color: #0a7c42;
-$success-bg: #ecfdf5;
+$error-color: $secondary-dark-red; // #8C1515
+$error-bg: $gray-50;
+$success-color: #0a7c42; // Dark green for pass state
+$success-bg: $gray-50;
 $info-color: $primary-color;
-$info-bg: #f0f9ff;
-$warning-color: #d97706;
-$warning-bg: #fffbeb;
+$info-bg: $gray-50;
+$warning-color: $secondary-gray; // #53565A
+$warning-bg: $gray-50;
 
 // Animations
 $transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);

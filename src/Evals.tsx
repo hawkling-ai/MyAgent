@@ -801,12 +801,12 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
               {/* Accordion sections for Pass/Fail */}
               <div className="results-accordion">
                 {/* Pass Section */}
-                <div className="accordion-section">
+                <div className={`accordion-section ${accordionState.pass ? 'accordion-section-open' : ''}`}>
                   <button
                     className="accordion-header pass-header"
                     onClick={() => setAccordionState(prev => ({ ...prev, pass: !prev.pass }))}
                   >
-                    <span className="accordion-icon">{accordionState.pass ? '▼' : '▶'}</span>
+                    <span className="accordion-icon">▶</span>
                     <span className="accordion-title">Pass ({passCount})</span>
                   </button>
                   {accordionState.pass && (
@@ -875,12 +875,12 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                 </div>
 
                 {/* Fail Section */}
-                <div className="accordion-section">
+                <div className={`accordion-section ${accordionState.fail ? 'accordion-section-open' : ''}`}>
                   <button
                     className="accordion-header fail-header"
                     onClick={() => setAccordionState(prev => ({ ...prev, fail: !prev.fail }))}
                   >
-                    <span className="accordion-icon">{accordionState.fail ? '▼' : '▶'}</span>
+                    <span className="accordion-icon">▶</span>
                     <span className="accordion-title">Fail ({failCount})</span>
                   </button>
                   {accordionState.fail && (
