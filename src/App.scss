@@ -1520,3 +1520,136 @@ select,
     }
   }
 }
+
+// Demographic Insights Dashboard Styles - Single Chart Layout
+.demographic-insights {
+  margin: 30px 0;
+  padding: 25px;
+  background: $background-primary;
+  @include sharp-box;
+  border: $border-width-thin solid $secondary-gray;
+
+  .insights-header {
+    margin-bottom: 25px;
+    border-bottom: $border-width-thin solid $secondary-gray;
+    padding-bottom: 15px;
+
+    h3 {
+      @include heading-secondary;
+      color: $primary-color;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insights-subtitle {
+      @include body-text;
+      color: $text-muted;
+      margin: 0;
+      font-size: 0.95em;
+    }
+  }
+
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: $background-secondary;
+    @include sharp-box;
+    border: $border-width-thin solid $gray-200;
+
+    .control-label {
+      @include technical-label;
+      color: $text-secondary;
+      font-size: 0.9em;
+      margin: 0;
+    }
+
+    .variable-dropdown {
+      @include input-base;
+      padding: 8px 12px;
+      font-size: 0.9em;
+      min-width: 180px;
+      background: $background-primary;
+      color: $text-primary;
+
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      }
+
+      option {
+        padding: 8px;
+        background: $background-primary;
+        color: $text-primary;
+      }
+    }
+  }
+
+  .single-chart-container {
+    background: $background-secondary;
+    @include sharp-box;
+    border: $border-width-thin solid $secondary-gray;
+    padding: 20px;
+    transition: $transition-base;
+
+    &:hover {
+      border-color: $primary-color;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  // Tooltip styles
+  .demographic-tooltip {
+    background: $background-primary;
+    @include sharp-box;
+    border: $border-width-thin solid $primary-color;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+
+    .tooltip-label {
+      @include technical-label;
+      color: $primary-color;
+      margin: 0 0 4px 0;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    p {
+      @include body-text;
+      margin: 2px 0;
+      font-size: 0.85em;
+      color: $text-secondary;
+    }
+  }
+
+  // Responsive chart containers
+  .recharts-wrapper {
+    .recharts-cartesian-axis-tick-value {
+      fill: $text-secondary !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 12px !important;
+    }
+
+    .recharts-cartesian-grid-horizontal line,
+    .recharts-cartesian-grid-vertical line {
+      stroke: $gray-200 !important;
+      stroke-dasharray: 3 3 !important;
+    }
+
+    .recharts-legend-item-text {
+      color: $text-secondary !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 12px !important;
+    }
+
+    .recharts-tooltip-wrapper {
+      z-index: 1000 !important;
+    }
+  }
+}

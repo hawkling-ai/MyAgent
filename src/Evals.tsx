@@ -3,6 +3,7 @@ import { gql, useQuery } from "@apollo/client";
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
+import DemographicInsights from "./DemographicInsights";
 import "./App.scss";
 
 interface EvalResult {
@@ -944,6 +945,9 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                   </div>
                 </div>
               </div>
+
+              {/* Demographic Insights Dashboard */}
+              <DemographicInsights results={results} patients={patients} />
 
               {/* Accordion sections for Pass/Fail */}
               <div className="results-accordion">
