@@ -1,0 +1,123 @@
+{
+  "strep_throat": {
+    "rubric_name": "Centor Criteria",
+    "condition": "Streptococcal pharyngitis",
+    "criteria": [
+      {
+        "name": "Tonsillar exudate",
+        "description": "Presence of pus on the tonsils"
+      },
+      {
+        "name": "Tender anterior cervical lymphadenopathy",
+        "description": "Painful, swollen lymph nodes in the front of the neck"
+      },
+      {
+        "name": "History of fever",
+        "description": "Reported fever >38°C (100.4°F)"
+      },
+      {
+        "name": "Absence of cough",
+        "description": "No cough present"
+      }
+    ],
+    "scoring_rules": {
+      "0-1": "Low risk. No testing or antibiotics needed.",
+      "2-3": "Moderate risk. Consider rapid strep test or throat culture.",
+      "4": "High risk. Consider empiric antibiotics."
+    },
+    "references": [
+      "https://www.ncbi.nlm.nih.gov/books/NBK448190/",
+      "https://www.mdcalc.com/calc/1020/centor-score-modified"
+    ]
+  },
+  "pulmonary_embolism": {
+    "rubric_name": "Wells Criteria for Pulmonary Embolism",
+    "condition": "Pulmonary embolism",
+    "criteria": [
+      {
+        "name": "Clinical signs of DVT",
+        "description": "Leg swelling and pain with palpation"
+      },
+      {
+        "name": "PE is most likely diagnosis",
+        "description": "No alternative diagnosis more likely"
+      },
+      {
+        "name": "Heart rate >100 bpm",
+        "description": "Elevated pulse"
+      },
+      {
+        "name": "Immobilization or recent surgery",
+        "description": "Within the past 4 weeks"
+      },
+      {
+        "name": "Previous DVT or PE",
+        "description": "Medical history of DVT or PE"
+      },
+      {
+        "name": "Hemoptysis",
+        "description": "Coughing up blood"
+      },
+      {
+        "name": "Malignancy",
+        "description": "Ongoing cancer diagnosis or treatment"
+      }
+    ],
+    "scoring_rules": {
+      "0-1": "Low probability (<5%). Consider D-dimer test.",
+      "2-6": "Moderate probability. Consider imaging (CTPA or V/Q scan).",
+      "7+": "High probability. Consider empiric anticoagulation and imaging."
+    },
+    "references": [
+      "https://www.ncbi.nlm.nih.gov/books/NBK441858/",
+      "https://www.mdcalc.com/calc/1037/wells-criteria-pulmonary-embolism"
+    ]
+  },
+  "atrial_fibrillation": {
+    "rubric_name": "CHA₂DS₂-VASc Score",
+    "condition": "Atrial fibrillation (stroke risk assessment)",
+    "criteria": [
+      {
+        "name": "Congestive heart failure",
+        "description": "Clinical diagnosis or symptoms of CHF"
+      },
+      {
+        "name": "Hypertension",
+        "description": "History of high blood pressure"
+      },
+      {
+        "name": "Age ≥75 years",
+        "description": "2 points for age ≥75"
+      },
+      {
+        "name": "Diabetes mellitus",
+        "description": "History of diabetes"
+      },
+      {
+        "name": "Stroke/TIA/thromboembolism",
+        "description": "2 points for prior stroke/TIA"
+      },
+      {
+        "name": "Vascular disease",
+        "description": "MI, PAD, or aortic plaque"
+      },
+      {
+        "name": "Age 65–74 years",
+        "description": "1 point for this age range"
+      },
+      {
+        "name": "Sex category",
+        "description": "1 point if female"
+      }
+    ],
+    "scoring_rules": {
+      "0": "Low risk. No anticoagulation needed.",
+      "1": "Intermediate risk. Consider anticoagulation.",
+      "≥2": "High risk. Recommend anticoagulation."
+    },
+    "references": [
+      "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4139773/",
+      "https://www.mdcalc.com/calc/382/cha2ds2-vasc-score-atrial-fibrillation-stroke-risk"
+    ]
+  }
+}
