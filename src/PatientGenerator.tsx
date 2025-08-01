@@ -465,7 +465,7 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
             <div className="modal-body">
               <div className="ai-info">
                 <p className="ai-description">
-                  🤖 This tool uses ChatGPT to get realistic demographic distributions for the specified medical condition, 
+                  🤖 This tool uses AI to get realistic demographic distributions for the specified medical condition, 
                   then generates patients that match real-world epidemiological data.
                 </p>
               </div>
@@ -507,7 +507,7 @@ function PatientGenerator({ onPatientsGenerated, providerId, onRefreshPatientLis
               
               {isLoadingDistribution && (
                 <div className="loading-status">
-                  <p>🔍 Getting demographic data from ChatGPT...</p>
+                  <p>🔍 Getting demographic data...</p>
                 </div>
               )}
               
