@@ -2,10 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { gql, useQuery } from "@apollo/client";
 import PatientEHR from "./PatientEHR";
-import {
-  documentGenerator,
-  DocumentGenerationOptions,
-} from "./utils/DocumentGenerator";
 import type { SOAPNote } from "./PatientEHR";
 
 const GET_PATIENTS = gql`
@@ -57,8 +53,6 @@ function PatientEHRWrapper({ providerId }: PatientEHRWrapperProps) {
   const navigate = useNavigate();
   const { loading, error, data } = useQuery(GET_PATIENTS);
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [soapLoading, setSoapLoading] = useState(false);
-  const [soapError, setSoapError] = useState<string | null>(null);
 
   // Helper function to extract condition from patient metadata
   const extractCondition = (patient: any): string => {
@@ -96,25 +90,26 @@ function PatientEHRWrapper({ providerId }: PatientEHRWrapperProps) {
     };
   };
 
-  // Function to generate and validate SOAP document
-  const generateAndValidateSOAPDocument = async (patient: Patient) => {
-    const condition = extractCondition(patient);
-    const options: DocumentGenerationOptions = {
-      disease: condition,
-      patientAge: parseInt(patient.age, 10),
-      patientGender: patient.gender,
-      patientRace: patient.primary_race || "Not specified",
-      validateDocument: true,
-    };
-
-    try {
-      const document = await documentGenerator.generateSOAPDocument(options);
-      return document;
-    } catch (error) {
-      console.error("Failed to generate valid SOAP document:", error);
-      throw error;
+  // Helper function to extract SOAP data from patient metadata
+  const extractSOAPDocument = (patient: any): SOAPNote | undefined => {
+    if (patient.metadata) {
+      try {
+        const metadata = JSON.parse(patient.metadata);
+        if (metadata.subjective || metadata.objective) {
+          return {
+            subjective: metadata.subjective || "",
+            objective: metadata.objective || "",
+            assessment: "", // Not stored in metadata currently
+            plan: "" // Not stored in metadata currently
+          };
+        }
+      } catch (error) {
+        console.warn("Failed to parse patient metadata for SOAP:", error);
+      }
     }
+    return undefined;
   };
+
 
   useEffect(() => {
     if (data && id) {
@@ -124,28 +119,16 @@ function PatientEHRWrapper({ providerId }: PatientEHRWrapperProps) {
       if (foundPatient) {
         const raceEthnicityData = extractRaceEthnicity(foundPatient);
         const condition = extractCondition(foundPatient);
+        const soapDocument = extractSOAPDocument(foundPatient);
 
         const patientData: Patient = {
           ...foundPatient,
           ...raceEthnicityData,
           condition,
+          soapDocument,
         };
 
         setPatient(patientData);
-
-        // Generate SOAP document
-        setSoapLoading(true);
-        setSoapError(null);
-
-        generateAndValidateSOAPDocument(patientData)
-          .then((soapDocument) => {
-            setPatient((prev) => (prev ? { ...prev, soapDocument } : null));
-            setSoapLoading(false);
-          })
-          .catch((error) => {
-            setSoapError("Failed to generate SOAP document");
-            setSoapLoading(false);
-          });
       }
     }
   }, [data, id]);
@@ -179,26 +162,6 @@ function PatientEHRWrapper({ providerId }: PatientEHRWrapperProps) {
       <div className="patient-list__error">
         <h3>Patient not found</h3>
         <p>The patient with ID {id} could not be found.</p>
-        <button onClick={handleBack} className="btn-primary">
-          Back to Patient List
-        </button>
-      </div>
-    );
-  }
-
-  if (soapLoading) {
-    return (
-      <div className="patient-list__loading">
-        <h3>Loading patient data from Healthie...</h3>
-      </div>
-    );
-  }
-
-  if (soapError) {
-    return (
-      <div className="patient-list__error">
-        <h3>Error generating documentation</h3>
-        <p>{soapError}</p>
         <button onClick={handleBack} className="btn-primary">
           Back to Patient List
         </button>

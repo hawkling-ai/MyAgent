@@ -944,12 +944,25 @@ select,
               font-weight: 600;
               display: block;
               color: $text-primary;
+
+              .soap-indicator {
+                display: inline-block;
+                margin-left: 8px;
+                font-size: 0.9em;
+                opacity: 0.7;
+                cursor: help;
+              }
             }
 
             .patient-details {
               @include technical-label;
               color: $text-muted;
               font-size: 0.85em;
+
+              .soap-available {
+                color: $success-color;
+                font-weight: 500;
+              }
             }
           }
         }

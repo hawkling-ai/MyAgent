@@ -3,7 +3,6 @@ import { gql, useQuery } from "@apollo/client";
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { documentGenerator } from "./utils/DocumentGenerator";
 import "./App.scss";
 
 interface EvalResult {
@@ -871,9 +870,17 @@ REACT_APP_BASETEN_MODEL_NAME_1=Llama-4-Scout-17B-16E-Instruct`}
                     onChange={() => handlePatientToggle(patient.id)}
                   />
                   <span className="patient-info">
-                    <span className="patient-name">{patient.name}</span>
+                    <span className="patient-name">
+                      {patient.name}
+                      {(patient.subjective || patient.objective) && (
+                        <span className="soap-indicator" title="Has clinical findings (S/O data)"> 📋</span>
+                      )}
+                    </span>
                     <span className="patient-details">
                       {patient.age}y {patient.gender} • {patient.diagnosis}
+                      {(patient.subjective || patient.objective) && (
+                        <span className="soap-available"> • Has clinical findings</span>
+                      )}
                     </span>
                   </span>
                 </label>
