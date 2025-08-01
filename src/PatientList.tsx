@@ -58,9 +58,10 @@ interface Patient {
 interface PatientListProps {
   providerId: string;
   onRefetchReady?: (refetch: () => void) => void;
+  onPatientClick?: (patient: Patient) => void;
 }
 
-function PatientList({ providerId, onRefetchReady }: PatientListProps) {
+function PatientList({ providerId, onRefetchReady, onPatientClick }: PatientListProps) {
   const { loading, error, data, refetch } = useQuery(GET_PATIENTS);
   const [bulkArchiveClients] = useMutation(BULK_ARCHIVE_CLIENTS);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -382,9 +383,42 @@ function PatientList({ providerId, onRefetchReady }: PatientListProps) {
               const raceEthnicityData = extractRaceEthnicity(patient);
               const condition = extractCondition(patient);
               return (
-                <tr key={patient.id} className="patient-row">
+                <tr 
+                  key={patient.id} 
+                  className="patient-row"
+                  onClick={() => onPatientClick && onPatientClick(patient)}
+                  style={{
+                    cursor: onPatientClick ? 'pointer' : 'default',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (onPatientClick) {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (onPatientClick) {
+                      e.currentTarget.style.backgroundColor = '';
+                    }
+                  }}
+                >
                   <td className="patient-name">
-                    <strong>{patient.full_name || 'N/A'}</strong>
+                    <strong style={{ 
+                      color: onPatientClick ? '#007bff' : 'inherit',
+                      textDecoration: onPatientClick ? 'underline' : 'none'
+                    }}>
+                      {patient.full_name || 'N/A'}
+                    </strong>
+                    {onPatientClick && (
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#6c757d',
+                        marginLeft: '8px',
+                        fontWeight: 'normal'
+                      }}>
+                        (Click to view EHR)
+                      </span>
+                    )}
                   </td>
                   <td>{patient.age || 'N/A'}</td>
                   <td>{patient.gender || 'N/A'}</td>
