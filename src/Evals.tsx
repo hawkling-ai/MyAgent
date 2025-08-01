@@ -79,9 +79,28 @@ For each condition in your differential, assess whether it is:
 
 Consider demographic risk factors, prevalence rates, and epidemiological data when making your assessment.
 
-You must respond with a JSON object containing:
-1. An array of differentials, each with a condition name and conclusion
-2. A brief reasoning explanation
+You MUST respond with a JSON object that exactly matches this schema:
+
+{
+  "differentials": [
+    {
+      "condition": "string - The medical condition being evaluated",
+      "conclusion": "string - Must be exactly one of: 'positive', 'negative', or 'needs follow-up'"
+    }
+  ],
+  "reasoning": "string - Brief explanation of your diagnostic reasoning based on the patient's demographics"
+}
+
+Example response:
+{
+  "differentials": [
+    {"condition": "Type 2 Diabetes", "conclusion": "positive"},
+    {"condition": "Hypertension", "conclusion": "positive"},
+    {"condition": "Sickle Cell Disease", "conclusion": "needs follow-up"},
+    {"condition": "Cystic Fibrosis", "conclusion": "negative"}
+  ],
+  "reasoning": "Based on the patient's age, ethnicity, and gender, metabolic conditions are more likely while genetic conditions specific to other populations are less probable."
+}
 
 Be comprehensive but focused on conditions relevant to the patient's demographics.`;
 
@@ -257,7 +276,7 @@ Patient Data:
             'Authorization': `Api-Key ${basetenKey}`
           },
           body: JSON.stringify({
-            prompt: fullPrompt + '\n\nRespond with a JSON object containing "differentials" array and "reasoning" string.',
+            prompt: fullPrompt + '\n\nIMPORTANT: Respond ONLY with a valid JSON object, no other text. The JSON must match this exact schema:\n{\n  "differentials": [\n    {"condition": "string", "conclusion": "positive|negative|needs follow-up"}\n  ],\n  "reasoning": "string"\n}',
             max_length: 500,
             temperature: 0.7,
             top_p: 0.9

@@ -1,0 +1,269 @@
+HEALTHIE DIAGNOSIS IMPLEMENTATION SPECIFICATION
+==============================================
+
+PROJECT CONTEXT
+---------------
+The Patient Management System currently generates synthetic patient cohorts with medical conditions
+using AI-powered demographic distributions. These conditions are stored in the metadata field as JSON.
+The system needs to be updated to properly store diagnoses using Healthie's diagnosis system.
+
+REQUIREMENTS
+------------
+1. Save patient conditions/diagnoses to Healthie's User.diagnosis field instead of just metadata
+2. Maintain backwards compatibility with existing patients who have conditions in metadata
+3. Display diagnoses in the patient list view
+4. Support the evaluation system described in EVALS.md which expects conditions in User.diagnosis
+
+CURRENT STATE
+-------------
+1. PatientGenerator.tsx:
+   - Generates patients with conditions
+   - Saves condition to metadata field as JSON (line 230: condition: patient.condition)
+   - Uses CREATE_CLIENT mutation to create patients
+
+2. PatientList.tsx:
+   - Displays patient demographic information
+   - Has race/ethnicity extraction from metadata
+   - Does NOT currently display conditions/diagnoses
+   - Does NOT fetch diagnosis data from API
+
+HEALTHIE API INFORMATION
+------------------------
+Based on research and documentation:
+- User object has a "diagnoses" field of type [Diagnosis!]
+- Diagnosis object likely contains:
+  - id: String
+  - name: String (condition name)
+  - code: String (ICD-10 code)
+  - active: Boolean
+  - onset_date: Date
+  - end_date: Date (optional)
+- Diagnoses can be managed via "Client Profile > Actions > Client Info > Diagnoses" in UI
+
+IMPLEMENTATION TASKS
+--------------------
+
+### Task 1: Update GET_PATIENTS Query
+File: src/PatientList.tsx
+Add diagnoses field to the GraphQL query:
+
+```graphql
+const GET_PATIENTS = gql`
+  query GetPatients {
+    users(active_status: "active", should_paginate: false) {
+      id
+      full_name
+      age
+      gender
+      primary_race
+      secondary_race
+      primary_ethnicity
+      secondary_ethnicity
+      metadata
+      email
+      phone_number
+      dob
+      created_at
+      diagnoses {
+        id
+        name
+        code
+        active
+        onset_date
+        end_date
+      }
+    }
+  }
+`;
+```
+
+### Task 2: Test Diagnosis Creation Methods
+The exact mutation syntax is not documented. Test these approaches in order:
+
+#### Approach A: Direct creation via createClientInput
+Test if the createClient mutation accepts a diagnoses field:
+```javascript
+const response = await createClient({
+  variables: {
+    input: {
+      first_name: firstName,
+      last_name: lastName,
+      // ... other fields
+      diagnoses: [{
+        name: patient.condition,
+        code: mapConditionToICD10(patient.condition),
+        active: true,
+        onset_date: new Date().toISOString()
+      }]
+    }
+  }
+});
+```
+
+#### Approach B: Separate createDiagnosis mutation
+Look for a mutation like:
+```graphql
+mutation CreateDiagnosis($input: createDiagnosisInput!) {
+  createDiagnosis(input: $input) {
+    diagnosis {
+      id
+      name
+      code
+    }
+  }
+}
+```
+
+#### Approach C: Update client after creation
+Use updateClient mutation to add diagnoses:
+```graphql
+mutation UpdateClient($input: updateClientInput!) {
+  updateClient(input: $input) {
+    user {
+      id
+      diagnoses {
+        id
+        name
+        code
+      }
+    }
+  }
+}
+```
+
+### Task 3: Implement ICD-10 Code Mapping
+Create a mapping function for common conditions to ICD-10 codes:
+
+```javascript
+const conditionToICD10Map = {
+  // Diabetes
+  'diabetes': 'E11.9',
+  'type 2 diabetes': 'E11.9',
+  'type 2 diabetes mellitus': 'E11.9',
+  'diabetes mellitus': 'E11.9',
+  'type 1 diabetes': 'E10.9',
+  
+  // Hypertension
+  'hypertension': 'I10',
+  'essential hypertension': 'I10',
+  'high blood pressure': 'I10',
+  
+  // Respiratory
+  'asthma': 'J45.909',
+  'bronchial asthma': 'J45.909',
+  'copd': 'J44.9',
+  
+  // Mental Health
+  'depression': 'F32.9',
+  'anxiety': 'F41.9',
+  
+  // Other common conditions
+  'obesity': 'E66.9',
+  'hypothyroidism': 'E03.9',
+  'osteoarthritis': 'M19.90'
+};
+
+function mapConditionToICD10(condition) {
+  const normalized = condition.toLowerCase().trim();
+  return conditionToICD10Map[normalized] || 'R69'; // R69 = Unknown/unspecified
+}
+```
+
+### Task 4: Update PatientGenerator.tsx
+Modify the savePatientToHealthie function to:
+1. Try to save diagnosis properly via API
+2. Continue saving to metadata as fallback
+3. Add error handling for diagnosis creation
+
+### Task 5: Update Patient Interface
+File: src/PatientList.tsx
+Add diagnoses to the Patient interface:
+
+```typescript
+interface Diagnosis {
+  id: string;
+  name: string;
+  code: string;
+  active: boolean;
+  onset_date?: string;
+  end_date?: string;
+}
+
+interface Patient {
+  // ... existing fields
+  diagnoses?: Diagnosis[];
+}
+```
+
+### Task 6: Add Diagnosis Display
+1. Add helper function to extract diagnosis information:
+```javascript
+const extractDiagnosis = (patient: any) => {
+  // Priority 1: Check diagnoses array from API
+  if (patient.diagnoses && patient.diagnoses.length > 0) {
+    const activeDiagnoses = patient.diagnoses
+      .filter(d => d.active)
+      .map(d => `${d.name} (${d.code})`)
+      .join(', ');
+    return activeDiagnoses || 'No active diagnoses';
+  }
+  
+  // Priority 2: Check metadata for backwards compatibility
+  if (patient.metadata) {
+    try {
+      const metadata = JSON.parse(patient.metadata);
+      if (metadata.condition) {
+        return `${metadata.condition} (from metadata)`;
+      }
+    } catch (error) {
+      console.warn('Failed to parse diagnosis from metadata:', error);
+    }
+  }
+  
+  return 'N/A';
+};
+```
+
+2. Add "Diagnosis/Condition" column to the table header
+3. Display diagnosis in table rows
+
+### Task 7: Testing Plan
+1. Test fetching diagnoses with updated GET_PATIENTS query
+2. Generate new test patients and verify diagnosis creation
+3. Verify diagnoses appear in Healthie dashboard
+4. Test backwards compatibility with existing patients
+5. Verify EVALS.md can access User.diagnosis
+
+ERROR HANDLING
+--------------
+- If diagnosis creation fails, log error but don't block patient creation
+- Always save condition to metadata as backup
+- Provide clear error messages in console for debugging
+
+BACKWARDS COMPATIBILITY
+----------------------
+- Continue saving condition to metadata
+- Display logic checks both sources (diagnoses array first, then metadata)
+- Existing patients without diagnoses will show condition from metadata
+
+FUTURE CONSIDERATIONS
+--------------------
+1. Add UI for editing diagnoses after patient creation
+2. Support multiple diagnoses per patient
+3. Add diagnosis history tracking (inactive diagnoses)
+4. Implement ICD-10 code search/autocomplete
+5. Add diagnosis date management (onset/end dates)
+
+NOTES FOR IMPLEMENTATION
+------------------------
+- The Healthie API uses GraphQL with Apollo Client
+- All mutations return messages array for error handling
+- Test in Healthie sandbox environment first
+- Consider rate limiting when bulk creating patients
+- ICD-10 codes should follow standard format (e.g., E11.9 for Type 2 Diabetes)
+
+REFERENCES
+----------
+- Healthie Diagnosis Documentation: https://docs.gethealthie.com/reference/2024-06-01/objects/diagnosis
+- User Object Documentation: https://docs.gethealthie.com/reference/2024-06-01/objects/user
+- EVALS.md: Expects condition to be accessible via User.diagnosis

@@ -20,55 +20,87 @@ body {
   color: $text-secondary;
 }
 
-// Custom scrollbar styling - applies to all scrollbars except html/body
-.patient-list__table,
-.evals-left-pane,
-.evals-right-pane,
-.patient-list-container,
-.modal-content,
-div[style*="overflow"],
+// Square scrollbar styling - black/white with sharp corners and custom arrows
 *:not(html):not(body) {
   &::-webkit-scrollbar {
     width: 16px;
     height: 16px;
   }
 
-  &::-webkit-scrollbar-track {
-    background: $secondary-white;
-    border: $border-width solid $primary-color;
-    border-radius: 0 !important;
-  }
-
   &::-webkit-scrollbar-thumb {
     background: $primary-color;
-    border: none;
     border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    min-height: 40px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $secondary-white;
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+  }
+  
+  &::-webkit-scrollbar-button {
+    background: $secondary-white;
+    border: 1px solid $primary-color;
+    border-radius: 0 !important;
+    -webkit-border-radius: 0 !important;
+    width: 16px;
+    height: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
     
     &:hover {
-      background: $gray-800;
+      background-color: $gray-100;
     }
     
     &:active {
-      background: $gray-700;
+      background-color: $primary-color;
+    }
+    
+    // Up arrow
+    &:vertical:decrement {
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='6' viewBox='0 0 8 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 6L4 0L8 6' fill='%23000000'/%3E%3C/svg%3E");
+    }
+    
+    // Down arrow
+    &:vertical:increment {
+      background-image: url("data:image/svg+xml,%3Csvg width='8' height='6' viewBox='0 0 8 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L4 6L8 0' fill='%23000000'/%3E%3C/svg%3E");
+    }
+    
+    // Left arrow
+    &:horizontal:decrement {
+      background-image: url("data:image/svg+xml,%3Csvg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 0L0 4L6 8' fill='%23000000'/%3E%3C/svg%3E");
+    }
+    
+    // Right arrow
+    &:horizontal:increment {
+      background-image: url("data:image/svg+xml,%3Csvg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L6 4L0 8' fill='%23000000'/%3E%3C/svg%3E");
+    }
+    
+    &:active {
+      // Invert arrow color when button is active
+      &:vertical:decrement {
+        background-image: url("data:image/svg+xml,%3Csvg width='8' height='6' viewBox='0 0 8 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 6L4 0L8 6' fill='%23FFFFFF'/%3E%3C/svg%3E");
+      }
+      
+      &:vertical:increment {
+        background-image: url("data:image/svg+xml,%3Csvg width='8' height='6' viewBox='0 0 8 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L4 6L8 0' fill='%23FFFFFF'/%3E%3C/svg%3E");
+      }
+      
+      &:horizontal:decrement {
+        background-image: url("data:image/svg+xml,%3Csvg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 0L0 4L6 8' fill='%23FFFFFF'/%3E%3C/svg%3E");
+      }
+      
+      &:horizontal:increment {
+        background-image: url("data:image/svg+xml,%3Csvg width='6' height='8' viewBox='0 0 6 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L6 4L0 8' fill='%23FFFFFF'/%3E%3C/svg%3E");
+      }
     }
   }
-
+  
   &::-webkit-scrollbar-corner {
     background: $secondary-white;
-    border: $border-width solid $primary-color;
-    border-radius: 0 !important;
   }
-}
-
-// Firefox scrollbar styling for non-root elements
-.patient-list__table,
-.evals-left-pane,
-.evals-right-pane,
-.patient-list-container,
-.modal-content,
-div[style*="overflow"] {
-  scrollbar-width: auto;
-  scrollbar-color: $primary-color $secondary-white;
 }
 
 // Utility classes

@@ -13,3 +13,21 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Force square scrollbars on all elements except html/body */
+*:not(html):not(body)::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+}
+
+*:not(html):not(body)::-webkit-scrollbar-track {
+  background: #fff;
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+}
+
+*:not(html):not(body)::-webkit-scrollbar-button {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+}
